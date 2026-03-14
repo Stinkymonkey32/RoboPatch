@@ -1,0 +1,35 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>netstandard2.1</TargetFramework>
+    <OutputType>Library</OutputType>
+    <LangVersion>latest</LangVersion>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- The "Shim" DLL that defines MonoBehaviour -->
+    <Reference Include="UnityEngine">
+      <HintPath>UnityEngine.dll</HintPath>
+    </Reference>
+    
+    <!-- The actual code for Unity's core systems -->
+    <Reference Include="UnityEngine.CoreModule">
+      <HintPath>UnityEngine.CoreModule.dll</HintPath>
+    </Reference>
+
+    <!-- REQUIRED for TextAsset -->
+    <Reference Include="UnityEngine.AssetBundleModule">
+      <HintPath>UnityEngine.AssetBundleModule.dll</HintPath>
+    </Reference>
+
+    <!-- BepInEx 6 Nightly references -->
+    <Reference Include="BepInEx.Core">
+      <HintPath>BepInEx.Core.dll</HintPath>
+    </Reference>
+    <Reference Include="BepInEx.Unity.Mono">
+      <HintPath>BepInEx.Unity.Mono.dll</HintPath>
+    </Reference>
+    <Reference Include="0Harmony">
+      <HintPath>0Harmony.dll</HintPath>
+    </Reference>
+  </ItemGroup>
+</Project>
