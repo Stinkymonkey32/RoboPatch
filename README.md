@@ -3,6 +3,8 @@
 
 RoboPatch is a patcher that allows injecting custom assets into the game Robotopia by Tomato Cake Inc.
 
+Oh yeah I ain't gonna hide it, yeah there is AI code in here but I dont know how to use C# so don't blame me >:( 
+
 # How does it work?
 
 RoboPatch works by using BepInEx, A open source patcher and plugin loader for Unity based games and the Harmony libary: A library for patching, replacing and decorating .NET and Mono methods during runtime. Before the game loads its assets RoboPatch loads custom assets by tricking Unity into thinking that RoboPatch's assets are what its supposed to load and injecting the custom assets. All changes are temporary and if you delete BepInEx your game will run normally again.
