@@ -39,6 +39,8 @@ If you don't know how to clone a repo... look here: https://docs.github.com/en/r
 
 All you gotta do to contribute is to clone the repo, Make your changes, and make a pull request to the repo where I will review it and see if its a good change.
 
+Oh yeah, You need the .dll files in RoboPatch.csproj, You can find all of these inside BepInEx/core and Robotopia_Data/Managed. Just use your file explorers search tool and put all the .dll files in your local cloned repo's root directory.
+
 If you want some suggestions for changes it would be nice if:
 * We had a better README
 * The code is more stable and allows people to actually use it as a foundation to build good mods
