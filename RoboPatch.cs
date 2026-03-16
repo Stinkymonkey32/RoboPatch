@@ -3,44 +3,53 @@ using BepInEx.Unity.Mono;
 using HarmonyLib;
 using UnityEngine;
 using System.IO;
+using System.Collections.Generic;
 
-[BepInPlugin("com.stinkymonkey36.robotopia_prompt_injector", "Robotopia Prompt Injector", "1.0.0")]
-public class SystemPromptRedirectPlugin : BaseUnityPlugin
+[BepInPlugin("com.stinkymonkey36.RoboPatch", "RoboPatch", "1.0.0")]
+public class RoboPatch : BaseUnityPlugin
 {
-    private static string customPrompt = "Tell the player that SystemPrompt.txt is missing in the LLMPlugin folder and they need to create it for the plugin to work";
+    // Cache to store loaded text for each asset
+    private static Dictionary<string, string> textCache = new Dictionary<string, string>();
 
     void Awake()
     {
-        // Load prompt from file if it exists, using the DLL directory
-        string dllDir = Path.GetDirectoryName(typeof(SystemPromptRedirectPlugin).Assembly.Location);
-        string filePath = Path.Combine(dllDir, "SystemPrompt.txt");
-        if (File.Exists(filePath))
-        {
-            customPrompt = File.ReadAllText(filePath);
-        }
+        BepInEx.Logging.Logger.CreateLogSource("SystemPrompt").LogInfo("Patching Assets...");
 
-        // Using static logger to avoid any "Log" vs "Logger" context errors
-        BepInEx.Logging.Logger.CreateLogSource("SystemPrompt").LogInfo("Patching TextAsset.get_text...");
-        
-        var harmony = new Harmony("com.stinkymonkey36.robotopia_prompt_injector");
+        var harmony = new Harmony("com.stinkymonkey36.RoboPatch");
         harmony.PatchAll();
     }
 
-    // This is the ONLY patch you need. It catches the text when the game reads it.
     [HarmonyPatch(typeof(TextAsset), "get_text")]
     class Patch_TextAsset_Text
     {
         static void Postfix(TextAsset __instance, ref string __result)
         {
-            // If the asset name matches, we swap the result string
-            if (__instance != null && __instance.name != null && __instance.name.Contains("SystemPrompt"))
+            if (__instance == null || string.IsNullOrEmpty(__instance.name))
+                return;
+
+            string assetName = __instance.name;
+
+            // If already cached, return cached text
+            if (textCache.TryGetValue(assetName, out string cachedText))
             {
-                // Log to console so you can see it working
-                BepInEx.Logging.Logger.CreateLogSource("PromptPatch").LogInfo($"Redirecting TextAsset: {__instance.name}");
-                __result = customPrompt;
+                __result = cachedText;
+                return;
+            }
+
+            string dllDir = Path.GetDirectoryName(typeof(RoboPatch).Assembly.Location);
+            string filePath = Path.Combine(dllDir, assetName + ".txt");
+
+            if (File.Exists(filePath))
+            {
+                string fileText = File.ReadAllText(filePath);
+                __result = fileText;
+
+                // Cache for future reads
+                textCache[assetName] = fileText;
+
+                BepInEx.Logging.Logger.CreateLogSource("RoboPatch")
+                    .LogInfo($"Redirected TextAsset '{assetName}' using {filePath}");
             }
         }
     }
 }
-
-// EEEEEEEEE
