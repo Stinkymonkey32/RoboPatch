@@ -1,4 +1,3 @@
-
 # RoboPatch (Alpha)
 
 RoboPatch is a patcher that allows injecting custom assets into the game Robotopia by Tomato Cake Inc.
@@ -50,6 +49,7 @@ If you want some suggestions for changes it would be nice if:
 * Robotopia Dev team / Tomato Cake Inc: For allowing me to create this project. https://discord.gg/5vQvxFNDGJ
 * BepInEx team: For the whole weird patch framework. https://github.com/BepInEx/BepInEx
 * Harmony team: For the weird patch... libary?? https://github.com/pardeike/Harmony
+* Cinematic Unity Explorer team: For the tool I used to build this thing. https://github.com/originalnicodr/CinematicUnityExplorer
 
 
 
