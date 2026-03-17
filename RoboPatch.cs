@@ -5,21 +5,25 @@ using UnityEngine;
 using System.IO;
 using System.Collections.Generic;
 
-[BepInPlugin("com.stinkymonkey36.RoboPatch", "RoboPatch", "1.2.0")]
+[BepInPlugin("com.stinkymonkey36.RoboPatch", "RoboPatch", "2.0.0")]
 public class RoboPatch : BaseUnityPlugin
 {
     // Cache for text assets
     private static Dictionary<string, string> textCache = new Dictionary<string, string>();
     
-    // Cache for loaded prefabs
+    // Cache for loaded prefabs (always kept in memory)
     private static Dictionary<string, GameObject> prefabCache = new Dictionary<string, GameObject>();
 
     void Awake()
     {
         BepInEx.Logging.Logger.CreateLogSource("SystemPrompt").LogInfo("Patching Assets...");
 
+        // Patch text assets
         var harmony = new Harmony("com.stinkymonkey36.RoboPatch");
         harmony.PatchAll();
+
+        // Preload prefabs here so they're always in memory
+        PreloadPrefab("Mimicer");  // Add other prefab names here if needed
     }
 
     // --------------------------
@@ -60,7 +64,7 @@ public class RoboPatch : BaseUnityPlugin
     }
 
     // --------------------------
-    // Prefab Loader
+    // Prefab Loader (always in memory)
     // --------------------------
     public static GameObject LoadPrefab(string prefabName)
     {
@@ -68,53 +72,61 @@ public class RoboPatch : BaseUnityPlugin
         if (prefabCache.TryGetValue(prefabName, out GameObject cached))
             return GameObject.Instantiate(cached);
 
-        string dllDir = Path.GetDirectoryName(typeof(RoboPatch).Assembly.Location);
-        string prefabPath = Path.Combine(dllDir, prefabName + ".prefab");
-
-        if (!File.Exists(prefabPath))
-        {
-            BepInEx.Logging.Logger.CreateLogSource("RoboPatch")
-                .LogWarning($"Prefab not found: {prefabPath}");
-            return null;
-        }
-
-        // Load prefab dynamically
-        GameObject prefab = UnityEngine.Object.Instantiate(LoadPrefabFromFile(prefabPath));
-        if (prefab == null)
-        {
-            BepInEx.Logging.Logger.CreateLogSource("RoboPatch")
-                .LogError($"Failed to load prefab: {prefabName}");
-            return null;
-        }
-
-        // Cache the prefab (the original, not instantiated copy)
-        prefabCache[prefabName] = prefab;
-
         BepInEx.Logging.Logger.CreateLogSource("RoboPatch")
-            .LogInfo($"Loaded prefab '{prefabName}' from {prefabPath}");
-
-        return GameObject.Instantiate(prefab);
+            .LogWarning($"Prefab '{prefabName}' not preloaded. Returning null.");
+        return null;
     }
 
     // --------------------------
-    // Helper: Load prefab from file
+    // Preload a prefab into memory
     // --------------------------
-    private static GameObject LoadPrefabFromFile(string path)
+    private static void PreloadPrefab(string prefabName)
     {
-        // Unity cannot directly load .prefab from file at runtime, 
-        // so we need to load via AssetBundle or Resources.
-        // We'll assume a small AssetBundle for each prefab:
-        AssetBundle bundle = AssetBundle.LoadFromFile(path);
+        string dllDir = Path.GetDirectoryName(typeof(RoboPatch).Assembly.Location);
+        string bundlePath = Path.Combine(dllDir, prefabName + ".bundle"); // Must be an AssetBundle
+
+        if (!File.Exists(bundlePath))
+        {
+            BepInEx.Logging.Logger.CreateLogSource("RoboPatch")
+                .LogWarning($"Prefab bundle not found: {bundlePath}");
+            return;
+        }
+
+        AssetBundle bundle = AssetBundle.LoadFromFile(bundlePath);
         if (bundle == null)
         {
             BepInEx.Logging.Logger.CreateLogSource("RoboPatch")
-                .LogError($"Failed to load AssetBundle at {path}");
-            return null;
+                .LogError($"Failed to load AssetBundle: {bundlePath}");
+            return;
         }
 
-        string prefabName = Path.GetFileNameWithoutExtension(path);
         GameObject prefab = bundle.LoadAsset<GameObject>(prefabName);
+        if (prefab == null)
+        {
+            BepInEx.Logging.Logger.CreateLogSource("RoboPatch")
+                .LogError($"Prefab not found inside bundle: {prefabName}");
+            bundle.Unload(false);
+            return;
+        }
+
+        prefabCache[prefabName] = prefab;
         bundle.Unload(false); // keep prefab in memory
-        return prefab;
+
+        BepInEx.Logging.Logger.CreateLogSource("RoboPatch")
+            .LogInfo($"Preloaded prefab '{prefabName}' from {bundlePath}");
+    }
+
+    // --------------------------
+    // Optional: spawn prefab anywhere
+    // --------------------------
+    public static GameObject SpawnPrefab(string prefabName, Vector3 position)
+    {
+        GameObject instance = LoadPrefab(prefabName);
+        if (instance != null)
+        {
+            instance.transform.position = position;
+            return instance;
+        }
+        return null;
     }
 }
