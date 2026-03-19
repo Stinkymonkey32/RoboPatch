@@ -1,3 +1,5 @@
+---
+
 # RoboPatch (Alpha)
 
 **RoboPatch** is a modding framework for *Robotopia* that allows you to inject and replace in-game assets at runtime.
@@ -13,6 +15,7 @@ Built using **BepInEx** and **Harmony**, RoboPatch hooks into Unity’s asset lo
 * Inject custom assets into Robotopia
 * Replace existing game assets dynamically
 * Load external **AssetBundles** at runtime
+* Patch in-game **TextAssets** using `.txt` files
 * Temporary changes (remove BepInEx to restore vanilla)
 
 ---
@@ -67,7 +70,7 @@ This means:
 
 6. **Extract RoboPatch** and place the **entire RoboPatch folder** inside:
 
-```text id="k8v0pq"
+```text
 /Robotopia/BepInEx/plugins/
 ```
 
@@ -91,7 +94,7 @@ Limitations:
 
 To add a new mod to RoboPatch:
 
-```text id="t2q5hk"
+```text
 /RoboPatch
    /bundles
       /ExampleMod
@@ -118,7 +121,7 @@ To add a new mod to RoboPatch:
 
 Every AssetBundle must have a corresponding `load.cfg` in the same folder as the bundle. Example:
 
-```text id="f6r7kl"
+```text
 /RoboPatch
    /bundles
       /ExampleMod
@@ -130,7 +133,7 @@ Every AssetBundle must have a corresponding `load.cfg` in the same folder as the
 
 Example `load.cfg` content:
 
-```text id="b2q9sj"
+```text
 bundle = example.bundle
 asset = Assets/Example.prefab
 script = ExampleMod.dll
@@ -149,13 +152,30 @@ scriptClass = RoboPatch.Example
 
 ---
 
+## 📄 Patching TextAssets
+
+RoboPatch allows you to **override in-game TextAssets** using plain `.txt` files.
+
+**How it works:**
+
+1. The `.txt` file name **must match the exact name** of the TextAsset in the game (case-sensitive).
+2. Place your `.txt` file inside the `/RoboPatch/textassets` folder.
+3. RoboPatch will automatically load it and override the original asset.
+
+**Tip:**
+
+* You can use tools like **Cinematic Unity Explorer** to look up TextAsset names, such as `Bio` or `SystemPrompt`.
+* Example: To override `SystemPrompt`, create `/RoboPatch/textassets/SystemPrompt.txt` with your custom content.
+
+---
+
 ## 🛠 Development / Building
 
 If you want to compile RoboPatch yourself or contribute:
 
 1. **Clone the repository**:
 
-```bash id="1p2y04"
+```bash
 git clone https://github.com/yourusername/RoboPatch.git
 ```
 
