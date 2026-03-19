@@ -1,5 +1,3 @@
----
-
 # RoboPatch (Alpha)
 
 **RoboPatch** is a modding framework for *Robotopia* that allows you to inject and replace in-game assets at runtime.
@@ -7,8 +5,6 @@
 Built using **BepInEx** and **Harmony**, RoboPatch hooks into Unity’s asset loading system and redirects it to custom content, letting you modify the game without permanently changing its files.
 
 > ⚠️ RoboPatch is still in **alpha**. It is usable, but may be slightly unstable and some features are manual.
-
----
 
 ## 🚀 Features
 
