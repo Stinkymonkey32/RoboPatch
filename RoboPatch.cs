@@ -10,6 +10,7 @@ using System.Reflection;
 [BepInPlugin("com.stinkymonkey36.RoboPatch", "RoboPatch", "1.0.0")]
 public class RoboPatch : BaseUnityPlugin
 {
+    // ── Original TextAsset patch ──
     private static Dictionary<string, string> textCache = new Dictionary<string, string>();
 
     [HarmonyPatch(typeof(TextAsset), "get_text")]
@@ -17,9 +18,11 @@ public class RoboPatch : BaseUnityPlugin
     {
         static void Postfix(TextAsset __instance, ref string __result)
         {
-            if (__instance == null || string.IsNullOrEmpty(__instance.name)) return;
+            if (__instance == null || string.IsNullOrEmpty(__instance.name))
+                return;
 
             string assetName = __instance.name;
+
             if (textCache.TryGetValue(assetName, out string cachedText))
             {
                 __result = cachedText;
@@ -41,23 +44,39 @@ public class RoboPatch : BaseUnityPlugin
         }
     }
 
-    private static GameObject loadedPrefab;
-    private static AssetBundle loadedBundle;
-    private string bundlesFolder;
+    // ── AssetBundle loading ──
+    private static GameObject loadedPrefab;           
+    private static AssetBundle loadedBundle;         
+    private string bundlesFolder;                     
+
+    // Store loaded DLL assemblies
     private List<Assembly> loadedAssemblies = new List<Assembly>();
+    private Dictionary<string, string> currentCfg;   // Keep current cfg for M-key spawn
 
     void Awake()
     {
         var harmony = new Harmony("com.stinkymonkey36.RoboPatch");
         harmony.PatchAll();
+
         Logger.LogInfo("RoboPatch initialized – TextAsset patch active. Loading bundle config...");
     }
 
     void Start()
     {
         bundlesFolder = Path.Combine(Path.GetDirectoryName(typeof(RoboPatch).Assembly.Location), "bundles");
+
         if (!Directory.Exists(bundlesFolder))
-            Directory.CreateDirectory(bundlesFolder);
+        {
+            try
+            {
+                Directory.CreateDirectory(bundlesFolder);
+                Logger.LogInfo($"Created bundles folder: {bundlesFolder}");
+            }
+            catch (Exception ex)
+            {
+                Logger.LogWarning($"Failed to create bundles folder: {ex.Message}");
+            }
+        }
 
         LoadBundleFromConfig();
     }
@@ -66,64 +85,98 @@ public class RoboPatch : BaseUnityPlugin
     {
         string dllDir = Path.GetDirectoryName(typeof(RoboPatch).Assembly.Location);
         string configPath = Path.Combine(dllDir, "load.cfg");
+
         if (!File.Exists(configPath))
         {
-            Logger.LogWarning("No load.cfg found – skipping bundle load.");
+            Logger.LogWarning("No load.cfg found next to DLL – skipping bundle load.");
             return;
         }
 
+        Logger.LogInfo($"Reading config: {configPath}");
+
         var lines = File.ReadAllLines(configPath);
-        var cfg = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        currentCfg = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+
         foreach (var line in lines)
         {
             var trimmed = line.Trim();
-            if (string.IsNullOrWhiteSpace(trimmed) || trimmed.StartsWith("#") || trimmed.StartsWith("//") || !trimmed.Contains("=")) continue;
+            if (string.IsNullOrWhiteSpace(trimmed) || trimmed.StartsWith("#") || trimmed.StartsWith("//") || !trimmed.Contains("="))
+                continue;
+
             var parts = trimmed.Split(new[] { '=' }, 2);
-            cfg[parts[0].Trim()] = parts[1].Trim();
+            if (parts.Length != 2) continue;
+
+            currentCfg[parts[0].Trim()] = parts[1].Trim();
         }
 
-        if (!cfg.TryGetValue("bundle", out string bundleFileName)) return;
+        if (!currentCfg.TryGetValue("bundle", out string bundleFileName) || string.IsNullOrWhiteSpace(bundleFileName))
+        {
+            Logger.LogError("load.cfg missing or empty 'bundle=' key.");
+            return;
+        }
+
         string bundlePath = Path.Combine(bundlesFolder, bundleFileName);
+
         if (!File.Exists(bundlePath))
         {
-            Logger.LogError($"Bundle not found: {bundlePath}");
+            Logger.LogError($"Bundle file not found: {bundlePath}");
+            Logger.LogInfo("Tip: Place your .bundle / .unity3d file in the 'bundles' folder next to the DLL.");
             return;
         }
 
-        loadedBundle = AssetBundle.LoadFromFile(bundlePath);
-        if (loadedBundle == null)
+        try
         {
-            Logger.LogError($"Failed to load bundle: {bundleFileName}");
-            return;
+            loadedBundle = AssetBundle.LoadFromFile(bundlePath);
+            if (loadedBundle == null)
+            {
+                Logger.LogError($"Failed to load AssetBundle from {bundlePath}");
+                return;
+            }
+
+            Logger.LogInfo($"Loaded AssetBundle: {bundleFileName}");
+
+            foreach (var assetName in loadedBundle.GetAllAssetNames())
+            {
+                Logger.LogDebug($"  Bundle contains: {assetName}");
+            }
+
+            if (!currentCfg.TryGetValue("asset", out string assetPath) || string.IsNullOrWhiteSpace(assetPath))
+            {
+                Logger.LogError("load.cfg missing or empty 'asset=' key (e.g. asset=Assets/PrefabName.prefab)");
+                return;
+            }
+
+            loadedPrefab = loadedBundle.LoadAsset<GameObject>(assetPath);
+            if (loadedPrefab == null)
+            {
+                Logger.LogError($"Failed to load asset '{assetPath}' from bundle '{bundleFileName}'");
+                Logger.LogWarning("Check spelling/case, and look at the 'Bundle contains:' logs above.");
+                return;
+            }
+
+            Logger.LogInfo($"Successfully loaded prefab: {assetPath}");
+
+            // Load DLL if specified
+            if (currentCfg.TryGetValue("script", out string dllName) && !string.IsNullOrWhiteSpace(dllName))
+            {
+                LoadDLLFromBundlesFolder(dllName);
+            }
+
+            // <-- AUTO-SPAWN REMOVED -->
         }
-
-        Logger.LogInfo($"Loaded AssetBundle: {bundleFileName}");
-
-        if (!cfg.TryGetValue("asset", out string assetPath)) return;
-        loadedPrefab = loadedBundle.LoadAsset<GameObject>(assetPath);
-        if (loadedPrefab == null)
+        catch (Exception ex)
         {
-            Logger.LogError($"Failed to load prefab: {assetPath}");
-            return;
+            Logger.LogError($"Exception while loading bundle: {ex}");
         }
-
-        Logger.LogInfo($"Successfully loaded prefab: {assetPath}");
-
-        // Load DLL if present
-        if (cfg.TryGetValue("script", out string dllName) && !string.IsNullOrWhiteSpace(dllName))
-            LoadDLLFromBundlesFolder(dllName);
-
-        // Auto-spawn
-        if (cfg.TryGetValue("spawn", out string spawnStr) && bool.TryParse(spawnStr, out bool shouldSpawn) && shouldSpawn)
-            SpawnLoadedPrefab(cfg);
     }
 
     private void LoadDLLFromBundlesFolder(string dllName)
     {
         string dllPath = Path.Combine(bundlesFolder, dllName);
+
         if (!File.Exists(dllPath))
         {
-            Logger.LogWarning($"DLL not found: {dllPath}");
+            Logger.LogWarning($"DLL not found in bundles folder: {dllPath}");
             return;
         }
 
@@ -139,49 +192,53 @@ public class RoboPatch : BaseUnityPlugin
         }
     }
 
-    private void SpawnLoadedPrefab(Dictionary<string, string> cfg)
-    {
-        if (loadedPrefab == null) return;
-
-        var instance = Instantiate(loadedPrefab, Vector3.zero, Quaternion.identity);
-        instance.SetActive(true);
-        Logger.LogInfo("Auto-spawned prefab.");
-
-        // Attach script from DLL
-        if (cfg.TryGetValue("scriptClass", out string className) && !string.IsNullOrWhiteSpace(className))
-        {
-            Type foundType = null;
-            foreach (var asm in loadedAssemblies)
-            {
-                foundType = asm.GetType(className);
-                if (foundType != null) break;
-            }
-
-            if (foundType != null && typeof(Component).IsAssignableFrom(foundType))
-            {
-                var comp = instance.AddComponent(foundType);
-                // If Mimicer has Activate() method, call it immediately to start
-                MethodInfo mi = foundType.GetMethod("Activate", BindingFlags.Instance | BindingFlags.Public);
-                mi?.Invoke(comp, null);
-                Logger.LogInfo($"Attached & activated script: {className}");
-            }
-            else Logger.LogWarning($"Script class not found: {className}");
-        }
-    }
-
+    // ── Spawn + attach + activate manually ──
     void Update()
     {
         if (Input.GetKeyDown(KeyCode.M) && loadedPrefab != null)
         {
             var instance = Instantiate(loadedPrefab, Vector3.zero, Quaternion.identity);
-            instance.SetActive(true);
             Logger.LogInfo("Manual spawn via M key.");
+
+            if (currentCfg != null && currentCfg.TryGetValue("scriptClass", out string className) && !string.IsNullOrWhiteSpace(className))
+            {
+                Type scriptType = null;
+                foreach (var asm in loadedAssemblies)
+                {
+                    scriptType = asm.GetType(className);
+                    if (scriptType != null) break;
+                }
+
+                if (scriptType != null && typeof(MonoBehaviour).IsAssignableFrom(scriptType))
+                {
+                    var comp = instance.GetComponent(scriptType) ?? instance.AddComponent(scriptType);
+
+                    // Call Activate method if it exists
+                    var method = scriptType.GetMethod("Activate", BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
+                    if (method != null)
+                    {
+                        method.Invoke(comp, null);
+                        Logger.LogInfo($"Activated {className} immediately after spawn.");
+                    }
+                    else
+                    {
+                        Logger.LogWarning($"No Activate() method found on {className}.");
+                    }
+                }
+                else
+                {
+                    Logger.LogWarning($"Script class '{className}' not found or not a MonoBehaviour.");
+                }
+            }
         }
     }
 
     void OnDestroy()
     {
-        loadedBundle?.Unload(false);
-        Logger.LogInfo("Unloaded AssetBundle.");
+        if (loadedBundle != null)
+        {
+            loadedBundle.Unload(false);
+            Logger.LogInfo("Unloaded AssetBundle on destroy.");
+        }
     }
 }
