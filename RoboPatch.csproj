@@ -21,6 +21,11 @@
       <HintPath>UnityEngine.AssetBundleModule.dll</HintPath>
     </Reference>
 
+    <!-- REQUIRED for Input -->
+    <Reference Include="UnityEngine.InputLegacyModule">
+      <HintPath>UnityEngine.InputLegacyModule.dll</HintPath>
+    </Reference>
+
     <!-- BepInEx 6 Nightly references -->
     <Reference Include="BepInEx.Core">
       <HintPath>BepInEx.Core.dll</HintPath>
