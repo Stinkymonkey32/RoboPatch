@@ -2,6 +2,7 @@ using BepInEx;
 using BepInEx.Unity.Mono;
 using HarmonyLib;
 using UnityEngine;
+using UnityEngine.UI;
 using System.IO;
 using System.Collections.Generic;
 using System;
@@ -10,19 +11,16 @@ using System.Reflection;
 [BepInPlugin("com.stinkymonkey36.RoboPatch", "RoboPatch", "1.0.0")]
 public class RoboPatch : BaseUnityPlugin
 {
-    // ── Original TextAsset patch ──
+    // ── TextAsset patch ──
     private static Dictionary<string, string> textCache = new Dictionary<string, string>();
-
     [HarmonyPatch(typeof(TextAsset), "get_text")]
     class Patch_TextAsset_Text
     {
         static void Postfix(TextAsset __instance, ref string __result)
         {
-            if (__instance == null || string.IsNullOrEmpty(__instance.name))
-                return;
+            if (__instance == null || string.IsNullOrEmpty(__instance.name)) return;
 
             string assetName = __instance.name;
-
             if (textCache.TryGetValue(assetName, out string cachedText))
             {
                 __result = cachedText;
@@ -30,70 +28,106 @@ public class RoboPatch : BaseUnityPlugin
             }
 
             string dllDir = Path.GetDirectoryName(typeof(RoboPatch).Assembly.Location);
-            string filePath = Path.Combine(dllDir, assetName + ".txt");
-
+            string filePath = Path.Combine(dllDir, "textassets", assetName + ".txt");
             if (File.Exists(filePath))
             {
                 string fileText = File.ReadAllText(filePath);
                 __result = fileText;
                 textCache[assetName] = fileText;
-
                 BepInEx.Logging.Logger.CreateLogSource("RoboPatch")
                     .LogInfo($"Redirected TextAsset '{assetName}' using {filePath}");
             }
         }
     }
 
-    // ── AssetBundle loading ──
-    private static GameObject loadedPrefab;           
-    private static AssetBundle loadedBundle;         
-    private string bundlesFolder;                     
+    // ── Bundle & prefab logic ──
+    private static GameObject loadedPrefab;
+    private static AssetBundle loadedBundle;
+    private string bundlesFolder;
+    private string scriptsFolder;
 
-    // Store loaded DLL assemblies
     private List<Assembly> loadedAssemblies = new List<Assembly>();
-    private Dictionary<string, string> currentCfg;   // Keep current cfg for M-key spawn
+    private Dictionary<string, string> currentCfg;
+
+    // ── Canvas UI ──
+    private Canvas uiCanvas;
+    private GameObject popupPanel;
+    private Text versionText;
 
     void Awake()
     {
         var harmony = new Harmony("com.stinkymonkey36.RoboPatch");
         harmony.PatchAll();
+        Logger.LogInfo("RoboPatch initialized – TextAsset patch active.");
 
-        Logger.LogInfo("RoboPatch initialized – TextAsset patch active. Loading bundle config...");
+        CreatePopupUI();
     }
 
     void Start()
     {
-        bundlesFolder = Path.Combine(Path.GetDirectoryName(typeof(RoboPatch).Assembly.Location), "bundles");
+        string dllDir = Path.GetDirectoryName(typeof(RoboPatch).Assembly.Location);
+        bundlesFolder = Path.Combine(dllDir, "bundles");
+        scriptsFolder = Path.Combine(dllDir, "scripts");
 
-        if (!Directory.Exists(bundlesFolder))
-        {
-            try
-            {
-                Directory.CreateDirectory(bundlesFolder);
-                Logger.LogInfo($"Created bundles folder: {bundlesFolder}");
-            }
-            catch (Exception ex)
-            {
-                Logger.LogWarning($"Failed to create bundles folder: {ex.Message}");
-            }
-        }
+        Directory.CreateDirectory(bundlesFolder);
+        Directory.CreateDirectory(scriptsFolder);
 
-        LoadBundleFromConfig();
+        LoadBundlesAndScripts();
     }
 
-    private void LoadBundleFromConfig()
+    private void LoadBundlesAndScripts()
     {
-        string dllDir = Path.GetDirectoryName(typeof(RoboPatch).Assembly.Location);
-        string configPath = Path.Combine(dllDir, "load.cfg");
-
-        if (!File.Exists(configPath))
+        foreach (var bundleSubFolder in Directory.GetDirectories(bundlesFolder))
         {
-            Logger.LogWarning("No load.cfg found next to DLL – skipping bundle load.");
-            return;
+            string modName = Path.GetFileName(bundleSubFolder);
+            Logger.LogInfo($"Found bundle folder: {modName}");
+
+            // Load AssetBundles
+            foreach (var bundleFile in Directory.GetFiles(bundleSubFolder, "*.bundle"))
+            {
+                try
+                {
+                    loadedBundle = AssetBundle.LoadFromFile(bundleFile);
+                    if (loadedBundle != null)
+                        Logger.LogInfo($"Loaded AssetBundle: {bundleFile}");
+                    else
+                        Logger.LogError($"Failed to load AssetBundle: {bundleFile}");
+                }
+                catch (Exception ex)
+                {
+                    Logger.LogError($"Exception loading bundle {bundleFile}: {ex}");
+                }
+            }
+
+            // Load DLLs
+            string scriptSubFolder = Path.Combine(scriptsFolder, modName);
+            if (Directory.Exists(scriptSubFolder))
+            {
+                foreach (var dllFile in Directory.GetFiles(scriptSubFolder, "*.dll"))
+                {
+                    try
+                    {
+                        var asm = Assembly.LoadFrom(dllFile);
+                        loadedAssemblies.Add(asm);
+                        Logger.LogInfo($"Loaded DLL '{dllFile}' for mod '{modName}'");
+                    }
+                    catch (Exception ex)
+                    {
+                        Logger.LogError($"Failed to load DLL {dllFile}: {ex}");
+                    }
+                }
+            }
+
+            // Load config
+            string configPath = Path.Combine(bundleSubFolder, "load.cfg");
+            if (File.Exists(configPath))
+                LoadConfig(configPath);
         }
+    }
 
+    private void LoadConfig(string configPath)
+    {
         Logger.LogInfo($"Reading config: {configPath}");
-
         var lines = File.ReadAllLines(configPath);
         currentCfg = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
 
@@ -109,90 +143,18 @@ public class RoboPatch : BaseUnityPlugin
             currentCfg[parts[0].Trim()] = parts[1].Trim();
         }
 
-        if (!currentCfg.TryGetValue("bundle", out string bundleFileName) || string.IsNullOrWhiteSpace(bundleFileName))
+        // Spawn-ready prefab
+        if (currentCfg.TryGetValue("asset", out string assetPath) && !string.IsNullOrWhiteSpace(assetPath) && loadedBundle != null)
         {
-            Logger.LogError("load.cfg missing or empty 'bundle=' key.");
-            return;
-        }
-
-        string bundlePath = Path.Combine(bundlesFolder, bundleFileName);
-
-        if (!File.Exists(bundlePath))
-        {
-            Logger.LogError($"Bundle file not found: {bundlePath}");
-            Logger.LogInfo("Tip: Place your .bundle / .unity3d file in the 'bundles' folder next to the DLL.");
-            return;
-        }
-
-        try
-        {
-            loadedBundle = AssetBundle.LoadFromFile(bundlePath);
-            if (loadedBundle == null)
-            {
-                Logger.LogError($"Failed to load AssetBundle from {bundlePath}");
-                return;
-            }
-
-            Logger.LogInfo($"Loaded AssetBundle: {bundleFileName}");
-
-            foreach (var assetName in loadedBundle.GetAllAssetNames())
-            {
-                Logger.LogDebug($"  Bundle contains: {assetName}");
-            }
-
-            if (!currentCfg.TryGetValue("asset", out string assetPath) || string.IsNullOrWhiteSpace(assetPath))
-            {
-                Logger.LogError("load.cfg missing or empty 'asset=' key (e.g. asset=Assets/PrefabName.prefab)");
-                return;
-            }
-
             loadedPrefab = loadedBundle.LoadAsset<GameObject>(assetPath);
-            if (loadedPrefab == null)
-            {
-                Logger.LogError($"Failed to load asset '{assetPath}' from bundle '{bundleFileName}'");
-                Logger.LogWarning("Check spelling/case, and look at the 'Bundle contains:' logs above.");
-                return;
-            }
-
-            Logger.LogInfo($"Successfully loaded prefab: {assetPath}");
-
-            // Load DLL if specified
-            if (currentCfg.TryGetValue("script", out string dllName) && !string.IsNullOrWhiteSpace(dllName))
-            {
-                LoadDLLFromBundlesFolder(dllName);
-            }
-
-            // <-- AUTO-SPAWN REMOVED -->
-        }
-        catch (Exception ex)
-        {
-            Logger.LogError($"Exception while loading bundle: {ex}");
+            if (loadedPrefab != null)
+                Logger.LogInfo($"Prefab loaded from config: {assetPath}");
+            else
+                Logger.LogError($"Failed to load prefab '{assetPath}' from bundle");
         }
     }
 
-    private void LoadDLLFromBundlesFolder(string dllName)
-    {
-        string dllPath = Path.Combine(bundlesFolder, dllName);
-
-        if (!File.Exists(dllPath))
-        {
-            Logger.LogWarning($"DLL not found in bundles folder: {dllPath}");
-            return;
-        }
-
-        try
-        {
-            var asm = Assembly.LoadFrom(dllPath);
-            loadedAssemblies.Add(asm);
-            Logger.LogInfo($"Loaded DLL: {dllName}");
-        }
-        catch (Exception ex)
-        {
-            Logger.LogError($"Failed to load DLL {dllName}: {ex}");
-        }
-    }
-
-    // ── Spawn + attach + activate manually ──
+    // ── Manual spawn (original code style) ──
     void Update()
     {
         if (Input.GetKeyDown(KeyCode.M) && loadedPrefab != null)
@@ -212,8 +174,6 @@ public class RoboPatch : BaseUnityPlugin
                 if (scriptType != null && typeof(MonoBehaviour).IsAssignableFrom(scriptType))
                 {
                     var comp = instance.GetComponent(scriptType) ?? instance.AddComponent(scriptType);
-
-                    // Call Activate method if it exists
                     var method = scriptType.GetMethod("Activate", BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
                     if (method != null)
                     {
@@ -221,9 +181,7 @@ public class RoboPatch : BaseUnityPlugin
                         Logger.LogInfo($"Activated {className} immediately after spawn.");
                     }
                     else
-                    {
                         Logger.LogWarning($"No Activate() method found on {className}.");
-                    }
                 }
                 else
                 {
@@ -240,5 +198,53 @@ public class RoboPatch : BaseUnityPlugin
             loadedBundle.Unload(false);
             Logger.LogInfo("Unloaded AssetBundle on destroy.");
         }
+    }
+
+    // ── Popup UI ──
+    private void CreatePopupUI()
+    {
+        var canvasGO = new GameObject("RoboPatchCanvas");
+        uiCanvas = canvasGO.AddComponent<Canvas>();
+        uiCanvas.renderMode = RenderMode.ScreenSpaceOverlay;
+        canvasGO.AddComponent<CanvasScaler>();
+        canvasGO.AddComponent<GraphicRaycaster>();
+
+        var versionGO = new GameObject("VersionText");
+        versionGO.transform.SetParent(canvasGO.transform, false);
+        versionText = versionGO.AddComponent<Text>();
+        versionText.text = "RoboPatch v1.0.0";
+        versionText.font = Resources.GetBuiltinResource<Font>("Arial.ttf");
+        versionText.color = Color.cyan;
+        versionText.alignment = TextAnchor.LowerLeft;
+        versionText.fontSize = 16;
+
+        var rect = versionGO.GetComponent<RectTransform>();
+        rect.anchorMin = new Vector2(0, 0);
+        rect.anchorMax = new Vector2(0, 0);
+        rect.pivot = new Vector2(0, 0);
+        rect.anchoredPosition = new Vector2(10, 10);
+        rect.sizeDelta = new Vector2(200, 30);
+
+        popupPanel = new GameObject("PopupPanel");
+        popupPanel.transform.SetParent(canvasGO.transform, false);
+        var panelImage = popupPanel.AddComponent<Image>();
+        panelImage.color = new Color(0f, 0f, 0f, 0.85f);
+
+        var panelRect = popupPanel.GetComponent<RectTransform>();
+        panelRect.sizeDelta = new Vector2(350, 150);
+        panelRect.anchoredPosition = Vector2.zero;
+
+        var popupTextGO = new GameObject("PopupText");
+        popupTextGO.transform.SetParent(popupPanel.transform, false);
+        var popupText = popupTextGO.AddComponent<Text>();
+        popupText.text = "RoboPatch loaded!\nDo you want to check for updates?";
+        popupText.font = Resources.GetBuiltinResource<Font>("Arial.ttf");
+        popupText.color = Color.white;
+        popupText.alignment = TextAnchor.MiddleCenter;
+        popupText.fontSize = 16;
+
+        var textRect = popupTextGO.GetComponent<RectTransform>();
+        textRect.sizeDelta = new Vector2(320, 80);
+        textRect.anchoredPosition = new Vector2(0, 20);
     }
 }

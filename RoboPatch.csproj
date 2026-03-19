@@ -1,4 +1,5 @@
 <Project Sdk="Microsoft.NET.Sdk">
+
   <PropertyGroup>
     <TargetFramework>netstandard2.1</TargetFramework>
     <OutputType>Library</OutputType>
@@ -6,27 +7,32 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <!-- The "Shim" DLL that defines MonoBehaviour -->
+    <!-- Core Unity DLLs -->
     <Reference Include="UnityEngine">
       <HintPath>UnityEngine.dll</HintPath>
     </Reference>
-    
-    <!-- The actual code for Unity's core systems -->
     <Reference Include="UnityEngine.CoreModule">
       <HintPath>UnityEngine.CoreModule.dll</HintPath>
     </Reference>
-
-    <!-- REQUIRED for TextAsset -->
     <Reference Include="UnityEngine.AssetBundleModule">
       <HintPath>UnityEngine.AssetBundleModule.dll</HintPath>
     </Reference>
-
-    <!-- REQUIRED for Input -->
     <Reference Include="UnityEngine.InputLegacyModule">
       <HintPath>UnityEngine.InputLegacyModule.dll</HintPath>
     </Reference>
 
-    <!-- BepInEx 6 Nightly references -->
+    <!-- Canvas stuff -->
+    <Reference Include="UnityEngine.UI">
+      <HintPath>UnityEngine.UI.dll</HintPath>
+    </Reference>
+    <Reference Include="UnityEngine.UIModule">
+      <HintPath>UnityEngine.UIModule.dll</HintPath>
+    </Reference>
+    <Reference Include="UnityEngine.TextRenderingModule">
+      <HintPath>UnityEngine.TextRenderingModule.dll</HintPath>
+    </Reference>
+
+    <!-- BepInEx -->
     <Reference Include="BepInEx.Core">
       <HintPath>BepInEx.Core.dll</HintPath>
     </Reference>
@@ -37,4 +43,5 @@
       <HintPath>0Harmony.dll</HintPath>
     </Reference>
   </ItemGroup>
+
 </Project>
