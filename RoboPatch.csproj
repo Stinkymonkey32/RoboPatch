@@ -20,9 +20,6 @@
     <Reference Include="UnityEngine.InputLegacyModule">
       <HintPath>UnityEngine.InputLegacyModule.dll</HintPath>
     </Reference>
-    <Reference Include="UnityEngine.UnityWebRequestModule">
-      <HintPath>UnityEngine.UnityWebRequestModule.dll</HintPath>
-    </Reference>
 
     <!-- Canvas stuff -->
     <Reference Include="UnityEngine.UI">
