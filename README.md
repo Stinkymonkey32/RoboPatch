@@ -67,7 +67,7 @@ Before the game loads its assets, RoboPatch intercepts the process and substitut
 
 6. Extract **RoboPatch** and place the **entire RoboPatch folder** inside:
 
-```text
+```text id="6gk8ft"
 /Robotopia/BepInEx/plugins/
 ```
 
@@ -79,13 +79,16 @@ Before the game loads its assets, RoboPatch intercepts the process and substitut
 
 To add a new mod to RoboPatch:
 
-```text
+```text id="irxrkq"
 /Robotopia
    /mods
       /ExampleMod
          ExampleMod.dll      ← Mod script
          example.bundle      ← AssetBundle
          load.cfg            ← Configuration file for asset/script
+         /textassets         ← Custom text files to override in-game TextAssets
+            SystemPrompt.txt
+            Bio.txt
 ```
 
 **Rules:**
@@ -100,7 +103,7 @@ To add a new mod to RoboPatch:
 
 Example `load.cfg`:
 
-```text
+```text id="gioiq0"
 # Example load.cfg
 asset=example.bundle
 spawn=manual
@@ -129,17 +132,19 @@ RoboPatch allows you to **replace in-game TextAssets** using plain `.txt` files.
 
 **How to do it:**
 
-1. Place your `.txt` file inside the `/textassets` folder:
+1. Place your `.txt` file inside the **`/textassets` folder** within your mod folder:
 
-```text
+```text id="6x3vl9"
 /Robotopia
-   /textassets
-       SystemPrompt.txt
-       Bio.txt
+   /mods
+      /ExampleMod
+         /textassets
+            SystemPrompt.txt
+            Bio.txt
 ```
 
-2. The **file name must exactly match** the in-game TextAsset name (case-sensitive)
-3. RoboPatch will automatically load these files and override the originals
+2. The **file name must exactly match** the in-game TextAsset name (case-sensitive).
+3. RoboPatch will automatically load these files from the mod’s `textassets` folder and override the originals in the game.
 
 **Tip for modding and contributing:**
 
@@ -154,7 +159,7 @@ If you want to compile RoboPatch yourself or contribute:
 
 1. **Clone the repository**:
 
-```bash
+```bash id="v4rxpm"
 git clone https://github.com/yourusername/RoboPatch.git
 ```
 
