@@ -1,8 +1,8 @@
 # **RoboPatch (Alpha)**
 
-**RoboPatch** is a modding thingy for *Robotopia* that allows you to inject and replace in-game assets at runtime.
+**RoboPatch** is a modding API for *Robotopia* that allows you to inject and replace in-game assets at runtime.
 
-Built using **BepInEx** and **Harmony**, RoboPatch hooks into Unity’s asset loading system and redirects it to custom content, letting you modify the game without permanently changing its files.
+Built using **BepInEx** and **Harmony**, Which hooks into Unity’s asset loading system and redirects it to custom content, letting you modify the game without permanently changing its files.
 
 > ⚠️ **RoboPatch is still in alpha**. It is usable, but may be slightly unstable and some features are manual.
 
@@ -191,7 +191,7 @@ Make sure the `.csproj` references DLLs from:
 
 4. **Deploy your mod**:
 
-* Copy `yourmod.dll` into `Robotopia/BepInEx/plugins/RoboPatch/mods/yourmodfolder`
+* Copy `yourmod.dll` into `Robotopia/Mods/yourmodfolder`
 * Run the game, and RoboPatch will automatically load your mods and assets
 
 ---
