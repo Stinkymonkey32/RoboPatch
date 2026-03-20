@@ -9,16 +9,46 @@ using System.IO;
 using System.Collections.Generic;
 using System;
 using System.Reflection;
-using System.Threading.Tasks;
 using System.Net.Http;
 using System.Net.Http.Headers;
+using System.Threading.Tasks;
 
-[BepInPlugin("com.stinkymonkey36.RoboPatch", "RoboPatch", "2.0.1")]
+[BepInPlugin("com.stinkymonkey36.RoboPatch", "RoboPatch", "2.1.2")]
 public class RoboPatch : BaseUnityPlugin
 {
-    private const string CURRENT_VERSION = "2.0.1";
-    private const string VERSION_URL = "https://raw.githubusercontent.com/Stinkymonkey32/RoboPatch/main/version.xml"; // now just raw version string
+    private const string CURRENT_VERSION = "2.1.2";
+    private const string VERSION_URL = "https://raw.githubusercontent.com/Stinkymonkey32/RoboPatch/main/version.xml";
 
+    // ── TextAsset patch ──
+    private static Dictionary<string, string> textCache = new Dictionary<string, string>();
+    [HarmonyPatch(typeof(TextAsset), "get_text")]
+    class Patch_TextAsset_Text
+    {
+        static void Postfix(TextAsset __instance, ref string __result)
+        {
+            if (__instance == null || string.IsNullOrEmpty(__instance.name)) return;
+
+            string assetName = __instance.name;
+            if (textCache.TryGetValue(assetName, out string cachedText))
+            {
+                __result = cachedText;
+                return;
+            }
+
+            string dllDir = Path.GetDirectoryName(typeof(RoboPatch).Assembly.Location);
+            string filePath = Path.Combine(dllDir, "textassets", assetName + ".txt");
+            if (File.Exists(filePath))
+            {
+                string fileText = File.ReadAllText(filePath);
+                __result = fileText;
+                textCache[assetName] = fileText;
+                BepInEx.Logging.Logger.CreateLogSource("RoboPatch")
+                    .LogInfo($"Redirected TextAsset '{assetName}' using {filePath}");
+            }
+        }
+    }
+
+    // ── Mod system ──
     class ModContext
     {
         public string Name;
@@ -29,10 +59,10 @@ public class RoboPatch : BaseUnityPlugin
     }
 
     private List<ModContext> mods = new();
-    private string bundlesFolder;
-    private string scriptsFolder;
+    private string modsFolder;
+    private string textAssetsFolder;
 
-    // UI
+    // ── UI ──
     private GameObject popupPanel;
     private Text popupText;
     private GameObject openButton;
@@ -44,27 +74,27 @@ public class RoboPatch : BaseUnityPlugin
         harmony.PatchAll();
 
         SceneManager.sceneLoaded += OnSceneLoaded;
-
         CreatePopupUI();
 
-        Logger.LogInfo("RoboPatch initialized.");
+        Logger.LogInfo("RoboPatch initialized – TextAsset patch active.");
     }
 
     void Start()
     {
         string dllDir = Path.GetDirectoryName(typeof(RoboPatch).Assembly.Location);
-        bundlesFolder = Path.Combine(dllDir, "bundles");
-        scriptsFolder = Path.Combine(dllDir, "scripts");
+        modsFolder = Path.Combine(dllDir, "mods");
+        textAssetsFolder = Path.Combine(dllDir, "textassets");
 
-        Directory.CreateDirectory(bundlesFolder);
-        Directory.CreateDirectory(scriptsFolder);
+        Directory.CreateDirectory(modsFolder);
+        Directory.CreateDirectory(textAssetsFolder);
 
-        LoadBundlesAndScripts();
+        LoadMods();
 
+        // Run updater
         _ = CheckForUpdates();
     }
 
-    // ───────── UPDATE SYSTEM ─────────
+    // ── Update system ──
     private async Task CheckForUpdates()
     {
         if (popupPanel != null) popupPanel.SetActive(false);
@@ -74,16 +104,15 @@ public class RoboPatch : BaseUnityPlugin
 
         try
         {
-            await Task.Delay(500); // allow network to initialize
+            await Task.Delay(500);
 
             using var client = new HttpClient();
             client.DefaultRequestHeaders.CacheControl = new CacheControlHeaderValue { NoCache = true, NoStore = true };
             client.DefaultRequestHeaders.Pragma.ParseAdd("no-cache");
             client.DefaultRequestHeaders.UserAgent.ParseAdd("RoboPatchUpdateChecker/1.0");
 
-            // Fetch the "XML" (actually just the plain version string)
             string text = await client.GetStringAsync(VERSION_URL);
-            string latestVersion = text.Trim(); // just trim whitespace/newlines
+            string latestVersion = text.Trim();
 
             Logger.LogInfo($"Fetched latest version: '{latestVersion}'");
 
@@ -102,59 +131,46 @@ public class RoboPatch : BaseUnityPlugin
     private void ShowUpdatePopup(string newVersion, string url)
     {
         pendingUpdateURL = url;
-
-        popupText.text =
-            $"RoboPatch update available!\n\nCurrent: {CURRENT_VERSION}\nLatest: {newVersion}";
-
-        if (openButton != null)
-            openButton.SetActive(!string.IsNullOrEmpty(url));
-
+        popupText.text = $"RoboPatch update available!\n\nCurrent: {CURRENT_VERSION}\nLatest: {newVersion}";
+        if (openButton != null) openButton.SetActive(!string.IsNullOrEmpty(url));
         popupPanel.SetActive(true);
     }
 
     private void ShowMessagePopup(string message)
     {
-        if (popupPanel != null)
-            popupPanel.SetActive(false);
-
+        if (popupPanel != null) popupPanel.SetActive(false);
         pendingUpdateURL = null;
         popupText.text = message;
-
-        if (openButton != null)
-            openButton.SetActive(false);
-
+        if (openButton != null) openButton.SetActive(false);
         popupPanel.SetActive(true);
     }
 
-    // ───────── LOAD SYSTEM ─────────
-    private void LoadBundlesAndScripts()
+    // ── Mod loader ──
+    private void LoadMods()
     {
-        foreach (var bundleSubFolder in Directory.GetDirectories(bundlesFolder))
+        foreach (var modSubFolder in Directory.GetDirectories(modsFolder))
         {
-            string modName = Path.GetFileName(bundleSubFolder);
+            string modName = Path.GetFileName(modSubFolder);
             var mod = new ModContext { Name = modName };
+            Logger.LogInfo($"Found mod folder: {modName}");
 
-            Logger.LogInfo($"[{modName}] Loading mod...");
-
-            foreach (var bundleFile in Directory.GetFiles(bundleSubFolder, "*.bundle"))
+            // AssetBundles
+            foreach (var bundleFile in Directory.GetFiles(modSubFolder, "*.bundle"))
             {
                 try { mod.Bundle = AssetBundle.LoadFromFile(bundleFile); }
-                catch (Exception ex) { Logger.LogError($"[{modName}] Bundle error: {ex}"); }
+                catch (Exception ex) { Logger.LogError($"[{modName}] Bundle load error: {ex}"); }
             }
 
-            string scriptSubFolder = Path.Combine(scriptsFolder, modName);
-            if (Directory.Exists(scriptSubFolder))
+            // DLLs
+            foreach (var dllFile in Directory.GetFiles(modSubFolder, "*.dll"))
             {
-                foreach (var dllFile in Directory.GetFiles(scriptSubFolder, "*.dll"))
-                {
-                    try { mod.Assemblies.Add(Assembly.LoadFrom(dllFile)); }
-                    catch (Exception ex) { Logger.LogError($"[{modName}] DLL error: {ex}"); }
-                }
+                try { mod.Assemblies.Add(Assembly.LoadFrom(dllFile)); }
+                catch (Exception ex) { Logger.LogError($"[{modName}] DLL load error: {ex}"); }
             }
 
-            string configPath = Path.Combine(bundleSubFolder, "load.cfg");
-            if (File.Exists(configPath))
-                LoadConfig(configPath, mod);
+            // Config
+            string configPath = Path.Combine(modSubFolder, "load.cfg");
+            if (File.Exists(configPath)) LoadConfig(configPath, mod);
 
             mods.Add(mod);
         }
@@ -165,8 +181,7 @@ public class RoboPatch : BaseUnityPlugin
         foreach (var line in File.ReadAllLines(path))
         {
             var trimmed = line.Trim();
-            if (string.IsNullOrWhiteSpace(trimmed) || trimmed.StartsWith("#") || !trimmed.Contains("="))
-                continue;
+            if (string.IsNullOrWhiteSpace(trimmed) || trimmed.StartsWith("#") || !trimmed.Contains("=")) continue;
 
             var parts = trimmed.Split(new[] { '=' }, 2);
             mod.Config[parts[0].Trim()] = parts[1].Trim();
@@ -176,13 +191,12 @@ public class RoboPatch : BaseUnityPlugin
             mod.Prefab = mod.Bundle.LoadAsset<GameObject>(asset);
     }
 
-    // ───────── SPAWNING ─────────
+    // ── Spawn ──
     void Update()
     {
-        if (Input.GetKeyDown(KeyCode.M))
+        if (UnityEngine.Input.GetKeyDown(KeyCode.M))
         {
-            foreach (var mod in mods)
-                SpawnMod(mod);
+            foreach (var mod in mods) SpawnMod(mod);
         }
     }
 
@@ -191,12 +205,11 @@ public class RoboPatch : BaseUnityPlugin
         foreach (var mod in mods)
         {
             if (!mod.Config.TryGetValue("spawn", out string spawnMode)) continue;
-            if (!spawnMode.Equals("auto", StringComparison.OrdinalIgnoreCase)) continue;
+            if (!spawnMode.Equals("manual", StringComparison.OrdinalIgnoreCase)) continue;
 
             if (mod.Config.TryGetValue("scene", out string sceneName))
             {
-                if (!scene.name.Equals(sceneName, StringComparison.OrdinalIgnoreCase))
-                    continue;
+                if (!scene.name.Equals(sceneName, StringComparison.OrdinalIgnoreCase)) continue;
             }
 
             SpawnMod(mod);
@@ -208,17 +221,15 @@ public class RoboPatch : BaseUnityPlugin
         if (mod.Prefab == null) return;
 
         Vector3 pos = Vector3.zero;
-
         if (mod.Config.TryGetValue("position", out string posStr))
         {
             var p = posStr.Split(',');
-            if (p.Length == 3)
+            if (p.Length == 3 &&
+                float.TryParse(p[0], out float x) &&
+                float.TryParse(p[1], out float y) &&
+                float.TryParse(p[2], out float z))
             {
-                pos = new Vector3(
-                    float.Parse(p[0]),
-                    float.Parse(p[1]),
-                    float.Parse(p[2])
-                );
+                pos = new Vector3(x, y, z);
             }
         }
 
@@ -228,8 +239,7 @@ public class RoboPatch : BaseUnityPlugin
 
     private void AttachScript(GameObject obj, ModContext mod)
     {
-        if (!mod.Config.TryGetValue("scriptClass", out string className))
-            return;
+        if (!mod.Config.TryGetValue("scriptClass", out string className)) return;
 
         foreach (var asm in mod.Assemblies)
         {
@@ -244,17 +254,14 @@ public class RoboPatch : BaseUnityPlugin
             if (method != null)
             {
                 try { method.Invoke(comp, null); }
-                catch (Exception ex)
-                {
-                    Logger.LogError($"[{mod.Name}] Activate error: {ex}");
-                }
+                catch (Exception ex) { Logger.LogError($"[{mod.Name}] Activate error: {ex}"); }
             }
 
             break;
         }
     }
 
-    // ───────── UI ─────────
+    // ── UI ──
     private void CreatePopupUI()
     {
         var canvasGO = new GameObject("RoboPatchCanvas");
@@ -262,8 +269,6 @@ public class RoboPatch : BaseUnityPlugin
 
         var canvas = canvasGO.AddComponent<Canvas>();
         canvas.renderMode = RenderMode.ScreenSpaceOverlay;
-        canvas.sortingOrder = 9999;
-
         canvasGO.AddComponent<CanvasScaler>();
         canvasGO.AddComponent<GraphicRaycaster>();
 
@@ -276,35 +281,31 @@ public class RoboPatch : BaseUnityPlugin
 
         popupPanel = new GameObject("PopupPanel");
         popupPanel.transform.SetParent(canvasGO.transform, false);
-
         var img = popupPanel.AddComponent<Image>();
-        img.color = new Color(0, 0, 0, 0.9f);
-
+        img.color = new Color(0f, 0f, 0f, 0.85f);
         var rect = popupPanel.GetComponent<RectTransform>();
-        rect.sizeDelta = new Vector2(420, 220);
-        rect.anchorMin = rect.anchorMax = new Vector2(0.5f, 0.5f);
+        rect.sizeDelta = new Vector2(350, 150);
         rect.anchoredPosition = Vector2.zero;
 
-        var textGO = new GameObject("Text");
-        textGO.transform.SetParent(popupPanel.transform, false);
-
-        popupText = textGO.AddComponent<Text>();
+        popupText = new GameObject("PopupText").AddComponent<Text>();
+        popupText.transform.SetParent(popupPanel.transform, false);
+        popupText.text = "RoboPatch loaded!";
         popupText.font = Resources.GetBuiltinResource<Font>("Arial.ttf");
-        popupText.fontSize = 18;
-        popupText.alignment = TextAnchor.MiddleCenter;
         popupText.color = Color.white;
+        popupText.alignment = TextAnchor.MiddleCenter;
+        popupText.fontSize = 16;
 
-        var tRect = textGO.GetComponent<RectTransform>();
-        tRect.sizeDelta = new Vector2(380, 120);
-        tRect.anchoredPosition = new Vector2(0, 40);
+        var tRect = popupText.GetComponent<RectTransform>();
+        tRect.sizeDelta = new Vector2(320, 80);
+        tRect.anchoredPosition = new Vector2(0, 20);
 
-        openButton = CreateButton("Open GitHub", new Vector2(-80, -70), () =>
+        openButton = CreateButton("Open GitHub", new Vector2(-70, -50), () =>
         {
             if (!string.IsNullOrEmpty(pendingUpdateURL))
                 Application.OpenURL(pendingUpdateURL);
         }, popupPanel.transform);
 
-        CreateButton("Dismiss", new Vector2(80, -70), () =>
+        CreateButton("Dismiss", new Vector2(70, -50), () =>
         {
             popupPanel.SetActive(false);
         }, popupPanel.transform);
