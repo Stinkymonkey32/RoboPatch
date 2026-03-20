@@ -1,20 +1,20 @@
-# RoboPatch (Alpha)
+# **RoboPatch (Alpha)**
 
-**RoboPatch** is a modding framework for *Robotopia* that allows you to inject and replace in-game assets at runtime.
+**RoboPatch** is a custom asset framework for *Robotopia* that allows you to inject and replace in-game assets at runtime.
 
-Built using **BepInEx** and **Harmony**, RoboPatch hooks into Unity’s asset loading system and redirects it to custom content, letting you modify the game without permanently changing its files.
+Built using **BepInEx** and **Harmony**, Which hooks into Unity’s asset loading system and redirects it to custom content, letting you modify the game without permanently changing its files.
 
-> ⚠️ RoboPatch is still in **alpha**. It is usable, but may be slightly unstable and some features are manual.
+> ⚠️ **RoboPatch is still in alpha**. It is usable, but may be slightly unstable and some features are manual.
 
 ---
 
 ## 🚀 Features
 
-* Inject custom assets into Robotopia
+* Inject custom assets into *Robotopia* at runtime
 * Replace existing game assets dynamically
 * Load external **AssetBundles** at runtime
 * Patch in-game **TextAssets** using `.txt` files
-* Temporary changes (remove BepInEx to restore vanilla)
+* Temporary changes (remove BepInEx to restore vanilla state)
 
 ---
 
@@ -23,7 +23,7 @@ Built using **BepInEx** and **Harmony**, RoboPatch hooks into Unity’s asset lo
 * Press **M** in-game to manually spawn assets
 
   * Only works for mods with `spawn=manual` in their `load.cfg`
-* Mods with `spawn=automatic` will load assets automatically without pressing **M**
+* Mods with `spawn=automatic` will load assets automatically without needing to press **M**
 
 ---
 
@@ -31,8 +31,8 @@ Built using **BepInEx** and **Harmony**, RoboPatch hooks into Unity’s asset lo
 
 RoboPatch uses:
 
-* **BepInEx** – a Unity plugin framework
-* **Harmony** – a runtime patching library
+* **BepInEx** – a Unity plugin framework for modding
+* **Harmony** – a runtime patching library to hook into Unity’s asset loading system
 
 Before the game loads its assets, RoboPatch intercepts the process and substitutes your custom assets in place of the originals. This means:
 
@@ -46,28 +46,28 @@ Before the game loads its assets, RoboPatch intercepts the process and substitut
 
 > ⚠️ RoboPatch has not been tested on Linux or macOS.
 
-### Requirements
+### **Requirements:**
 
 * Latest *Robotopia* build
-* BepInEx **Bleeding Edge**
+* **BepInEx Bleeding Edge** version
 
-### Steps
+### **Steps:**
 
 1. Download *Robotopia* from Discord:
    [https://discord.gg/5vQvxFNDGJ](https://discord.gg/5vQvxFNDGJ)
 
-2. Download BepInEx Bleeding Edge:
+2. Download **BepInEx Bleeding Edge**:
    [https://builds.bepinex.dev](https://builds.bepinex.dev)
 
-3. Extract BepInEx into your Robotopia folder
+3. Extract BepInEx into your *Robotopia* folder
 
-4. Run the game **once** to generate required files
+4. Run the game **once** to generate the required files
 
-5. Download the latest RoboPatch release from **Releases**
+5. Download the latest **RoboPatch** release from the **Releases** section
 
-6. **Extract RoboPatch** and place the **entire RoboPatch folder** inside:
+6. Extract **RoboPatch** and place the **entire RoboPatch folder** inside:
 
-```text id="l0bh2n"
+```text id="6gk8ft"
 /Robotopia/BepInEx/plugins/
 ```
 
@@ -79,13 +79,16 @@ Before the game loads its assets, RoboPatch intercepts the process and substitut
 
 To add a new mod to RoboPatch:
 
-```text id="1jem7l"
+```text id="irxrkq"
 /Robotopia
    /mods
       /ExampleMod
          ExampleMod.dll      ← Mod script
          example.bundle      ← AssetBundle
          load.cfg            ← Configuration file for asset/script
+         /textassets         ← Custom text files to override in-game TextAssets
+            SystemPrompt.txt
+            Bio.txt
 ```
 
 **Rules:**
@@ -100,7 +103,7 @@ To add a new mod to RoboPatch:
 
 Example `load.cfg`:
 
-```text id="q12yk4"
+```text id="gioiq0"
 # Example load.cfg
 asset=example.bundle
 spawn=manual
@@ -119,7 +122,7 @@ scriptClass=Example
 
 > RoboPatch reads this file to know **which asset bundle to load, where to spawn it, and which mod script to run**.
 
-**Tip:** Scene names must match exactly as they appear in Robotopia, including sub-location paths separated by slashes.
+**Tip:** Scene names must match exactly as they appear in *Robotopia*, including sub-location paths separated by slashes.
 
 ---
 
@@ -129,17 +132,19 @@ RoboPatch allows you to **replace in-game TextAssets** using plain `.txt` files.
 
 **How to do it:**
 
-1. Place your `.txt` file inside the `/textassets` folder:
+1. Place your `.txt` file inside the **`/textassets` folder** within your mod folder:
 
-```text id="878pxs"
+```text id="6x3vl9"
 /Robotopia
-   /textassets
-       SystemPrompt.txt
-       Bio.txt
+   /mods
+      /ExampleMod
+         /textassets
+            SystemPrompt.txt
+            Bio.txt
 ```
 
-2. The **file name must exactly match** the in-game TextAsset name (case-sensitive)
-3. RoboPatch will automatically load these files and override the originals
+2. The **file name must exactly match** the in-game TextAsset name (case-sensitive).
+3. RoboPatch will automatically load these files from the mod’s `textassets` folder and override the originals in the game.
 
 **Tip for modding and contributing:**
 
@@ -154,7 +159,7 @@ If you want to compile RoboPatch yourself or contribute:
 
 1. **Clone the repository**:
 
-```bash id="7fdd37"
+```bash id="v4rxpm"
 git clone https://github.com/yourusername/RoboPatch.git
 ```
 
@@ -186,7 +191,7 @@ Make sure the `.csproj` references DLLs from:
 
 4. **Deploy your mod**:
 
-* Copy `yourmod.dll` into Robotopia/BepInEx/plugins/RoboPatch/mods/yourmodfolder
+* Copy `yourmod.dll` into `Robotopia/Mods/yourmodfolder`
 * Run the game, and RoboPatch will automatically load your mods and assets
 
 ---
@@ -225,7 +230,7 @@ RoboPatch is an **unofficial modding framework**.
 
 ## 🙏 Credits
 
-* Robotopia Dev Team / Tomato Cake Inc: [https://discord.gg/5vQvxFNDGJ](https://discord.gg/5vQvxFNDGJ)
-* BepInEx Team: [https://github.com/BepInEx/BepInEx](https://github.com/BepInEx/BepInEx)
-* Harmony: [https://github.com/pardeike/Harmony](https://github.com/pardeike/Harmony)
-* Cinematic Unity Explorer: [https://github.com/originalnicodr/CinematicUnityExplorer](https://github.com/originalnicodr/CinematicUnityExplorer)
+* *Robotopia Dev Team / Tomato Cake Inc*: [https://discord.gg/5vQvxFNDGJ](https://discord.gg/5vQvxFNDGJ)
+* **BepInEx Team**: [https://github.com/BepInEx/BepInEx](https://github.com/BepInEx/BepInEx)
+* **Harmony**: [https://github.com/pardeike/Harmony](https://github.com/pardeike/Harmony)
+* **Cinematic Unity Explorer**: [https://github.com/originalnicodr/CinematicUnityExplorer](https://github.com/originalnicodr/CinematicUnityExplorer)
