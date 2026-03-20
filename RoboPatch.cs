@@ -13,10 +13,10 @@ using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Threading.Tasks;
 
-[BepInPlugin("com.stinkymonkey36.RoboPatch", "RoboPatch", "2.2.0")]
+[BepInPlugin("com.stinkymonkey36.RoboPatch", "RoboPatch", "2.2.1")]
 public class RoboPatch : BaseUnityPlugin
 {
-    private const string CURRENT_VERSION = "2.2.0";
+    private const string CURRENT_VERSION = "2.2.1";
     private const string VERSION_URL = "https://raw.githubusercontent.com/Stinkymonkey32/RoboPatch/main/version.xml";
 
     // ── TextAsset patch (MOD-BASED) ──
