@@ -13,10 +13,10 @@ using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Threading.Tasks;
 
-[BepInPlugin("com.stinkymonkey36.RoboPatch", "RoboPatch", "2.2.1")]
+[BepInPlugin("com.stinkymonkey36.RoboPatch", "RoboPatch", "2.2.2")]
 public class RoboPatch : BaseUnityPlugin
 {
-    private const string CURRENT_VERSION = "2.2.1";
+    private const string CURRENT_VERSION = "2.2.2";
     private const string VERSION_URL = "https://raw.githubusercontent.com/Stinkymonkey32/RoboPatch/main/version.xml";
 
     // ── TextAsset patch (MOD-BASED) ──
@@ -283,27 +283,34 @@ public class RoboPatch : BaseUnityPlugin
 
     private void SpawnMod(ModContext mod)
     {
-        if (mod.Prefab == null)
-        {
-            Logger.LogWarning($"[{mod.Name}] Cannot spawn: Prefab is null!");
-            return;
-        }
+        GameObject instance = null;
 
-        Vector3 pos = Vector3.zero;
-        if (mod.Config.TryGetValue("position", out string posStr))
+        if (mod.Prefab != null)
         {
-            var p = posStr.Split(',');
-            if (p.Length == 3 &&
-                float.TryParse(p[0], out float x) &&
-                float.TryParse(p[1], out float y) &&
-                float.TryParse(p[2], out float z))
+            Vector3 pos = Vector3.zero;
+            if (mod.Config.TryGetValue("position", out string posStr))
             {
-                pos = new Vector3(x, y, z);
+                var p = posStr.Split(',');
+                if (p.Length == 3 &&
+                    float.TryParse(p[0], out float x) &&
+                    float.TryParse(p[1], out float y) &&
+                    float.TryParse(p[2], out float z))
+                {
+                    pos = new Vector3(x, y, z);
+                }
             }
+
+            Logger.LogInfo($"[{mod.Name}] Spawning prefab at {pos}");
+            instance = Instantiate(mod.Prefab, pos, Quaternion.identity);
+        }
+        else
+        {
+            // Standalone placeholder if no prefab/assetbundle
+            instance = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            instance.name = mod.Name;
+            Logger.LogInfo($"[{mod.Name}] Spawned standalone placeholder (no prefab).");
         }
 
-        Logger.LogInfo($"[{mod.Name}] Spawning prefab at {pos}");
-        var instance = Instantiate(mod.Prefab, pos, Quaternion.identity);
         AttachScript(instance, mod);
     }
 
