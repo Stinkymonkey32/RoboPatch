@@ -13,14 +13,15 @@ using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Threading.Tasks;
 
-[BepInPlugin("com.stinkymonkey36.RoboPatch", "RoboPatch", "2.1.2")]
+[BepInPlugin("com.stinkymonkey36.RoboPatch", "RoboPatch", "2.2.0")]
 public class RoboPatch : BaseUnityPlugin
 {
-    private const string CURRENT_VERSION = "2.1.2";
+    private const string CURRENT_VERSION = "2.2.0";
     private const string VERSION_URL = "https://raw.githubusercontent.com/Stinkymonkey32/RoboPatch/main/version.xml";
 
-    // ── TextAsset patch ──
-    private static Dictionary<string, string> textCache = new Dictionary<string, string>();
+    // ── TextAsset patch (MOD-BASED) ──
+    private static Dictionary<string, string> textCache = new(StringComparer.OrdinalIgnoreCase);
+
     [HarmonyPatch(typeof(TextAsset), "get_text")]
     class Patch_TextAsset_Text
     {
@@ -28,22 +29,9 @@ public class RoboPatch : BaseUnityPlugin
         {
             if (__instance == null || string.IsNullOrEmpty(__instance.name)) return;
 
-            string assetName = __instance.name;
-            if (textCache.TryGetValue(assetName, out string cachedText))
+            if (textCache.TryGetValue(__instance.name, out string cachedText))
             {
                 __result = cachedText;
-                return;
-            }
-
-            string dllDir = Path.GetDirectoryName(typeof(RoboPatch).Assembly.Location);
-            string filePath = Path.Combine(dllDir, "textassets", assetName + ".txt");
-            if (File.Exists(filePath))
-            {
-                string fileText = File.ReadAllText(filePath);
-                __result = fileText;
-                textCache[assetName] = fileText;
-                BepInEx.Logging.Logger.CreateLogSource("RoboPatch")
-                    .LogInfo($"Redirected TextAsset '{assetName}' using {filePath}");
             }
         }
     }
@@ -60,7 +48,6 @@ public class RoboPatch : BaseUnityPlugin
 
     private List<ModContext> mods = new();
     private string modsFolder;
-    private string textAssetsFolder;
 
     // ── UI ──
     private GameObject popupPanel;
@@ -76,17 +63,33 @@ public class RoboPatch : BaseUnityPlugin
         SceneManager.sceneLoaded += OnSceneLoaded;
         CreatePopupUI();
 
-        Logger.LogInfo("RoboPatch initialized – TextAsset patch active.");
+        Logger.LogInfo("RoboPatch initialized – Mod-based TextAsset overrides active.");
     }
 
     void Start()
     {
-        string dllDir = Path.GetDirectoryName(typeof(RoboPatch).Assembly.Location);
-        modsFolder = Path.Combine(dllDir, "mods");
-        textAssetsFolder = Path.Combine(dllDir, "textassets");
+        string pluginDir = Path.GetDirectoryName(typeof(RoboPatch).Assembly.Location);
+        string gameRoot = Path.GetFullPath(Path.Combine(pluginDir, "..", ".."));
 
-        Directory.CreateDirectory(modsFolder);
-        Directory.CreateDirectory(textAssetsFolder);
+        string modsUpper = Path.Combine(gameRoot, "Mods");
+        string modsLower = Path.Combine(gameRoot, "mods");
+
+        if (Directory.Exists(modsUpper))
+        {
+            modsFolder = modsUpper;
+        }
+        else if (Directory.Exists(modsLower))
+        {
+            modsFolder = modsLower;
+        }
+        else
+        {
+            // Default to "Mods" if neither exists
+            modsFolder = modsUpper;
+            Directory.CreateDirectory(modsFolder);
+        }
+
+        Logger.LogInfo($"Mods folder: {modsFolder}");
 
         LoadMods();
 
@@ -157,20 +160,75 @@ public class RoboPatch : BaseUnityPlugin
             // AssetBundles
             foreach (var bundleFile in Directory.GetFiles(modSubFolder, "*.bundle"))
             {
-                try { mod.Bundle = AssetBundle.LoadFromFile(bundleFile); }
-                catch (Exception ex) { Logger.LogError($"[{modName}] Bundle load error: {ex}"); }
+                try
+                {
+                    Logger.LogInfo($"[{modName}] Loading bundle: {bundleFile}");
+
+                    mod.Bundle = AssetBundle.LoadFromFile(bundleFile);
+
+                    if (mod.Bundle == null)
+                    {
+                        Logger.LogError($"[{modName}] Bundle FAILED to load!");
+                    }
+                    else
+                    {
+                        Logger.LogInfo($"[{modName}] Bundle loaded successfully!");
+
+                        foreach (var name in mod.Bundle.GetAllAssetNames())
+                            Logger.LogInfo($"[{modName}] Bundle asset: {name}");
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Logger.LogError($"[{modName}] Bundle load error: {ex}");
+                }
             }
 
             // DLLs
             foreach (var dllFile in Directory.GetFiles(modSubFolder, "*.dll"))
             {
-                try { mod.Assemblies.Add(Assembly.LoadFrom(dllFile)); }
-                catch (Exception ex) { Logger.LogError($"[{modName}] DLL load error: {ex}"); }
+                try
+                {
+                    Logger.LogInfo($"[{modName}] Loading DLL: {dllFile}");
+                    mod.Assemblies.Add(Assembly.LoadFrom(dllFile));
+                }
+                catch (Exception ex)
+                {
+                    Logger.LogError($"[{modName}] DLL load error: {ex}");
+                }
             }
 
             // Config
             string configPath = Path.Combine(modSubFolder, "load.cfg");
-            if (File.Exists(configPath)) LoadConfig(configPath, mod);
+            if (File.Exists(configPath))
+            {
+                LoadConfig(configPath, mod);
+                Logger.LogInfo($"[{modName}] Config keys: {string.Join(", ", mod.Config.Keys)}");
+            }
+            else
+            {
+                Logger.LogWarning($"[{modName}] No load.cfg found!");
+            }
+
+            // TextAssets
+            string textFolder = Path.Combine(modSubFolder, "textassets");
+            if (Directory.Exists(textFolder))
+            {
+                foreach (var file in Directory.GetFiles(textFolder, "*.txt", SearchOption.AllDirectories))
+                {
+                    try
+                    {
+                        string key = Path.GetFileNameWithoutExtension(file);
+                        string text = File.ReadAllText(file);
+                        textCache[key] = text;
+                        Logger.LogInfo($"[{modName}] Loaded TextAsset override: {key}");
+                    }
+                    catch (Exception ex)
+                    {
+                        Logger.LogError($"[{modName}] TextAsset load error: {ex}");
+                    }
+                }
+            }
 
             mods.Add(mod);
         }
@@ -188,7 +246,10 @@ public class RoboPatch : BaseUnityPlugin
         }
 
         if (mod.Config.TryGetValue("asset", out string asset) && mod.Bundle != null)
+        {
             mod.Prefab = mod.Bundle.LoadAsset<GameObject>(asset);
+            Logger.LogInfo($"[{mod.Name}] Prefab loaded: {(mod.Prefab != null ? asset : "NULL")}");
+        }
     }
 
     // ── Spawn ──
@@ -196,7 +257,11 @@ public class RoboPatch : BaseUnityPlugin
     {
         if (UnityEngine.Input.GetKeyDown(KeyCode.M))
         {
-            foreach (var mod in mods) SpawnMod(mod);
+            Logger.LogInfo("M key pressed!");
+            foreach (var mod in mods)
+            {
+                SpawnMod(mod);
+            }
         }
     }
 
@@ -218,7 +283,11 @@ public class RoboPatch : BaseUnityPlugin
 
     private void SpawnMod(ModContext mod)
     {
-        if (mod.Prefab == null) return;
+        if (mod.Prefab == null)
+        {
+            Logger.LogWarning($"[{mod.Name}] Cannot spawn: Prefab is null!");
+            return;
+        }
 
         Vector3 pos = Vector3.zero;
         if (mod.Config.TryGetValue("position", out string posStr))
@@ -233,6 +302,7 @@ public class RoboPatch : BaseUnityPlugin
             }
         }
 
+        Logger.LogInfo($"[{mod.Name}] Spawning prefab at {pos}");
         var instance = Instantiate(mod.Prefab, pos, Quaternion.identity);
         AttachScript(instance, mod);
     }
@@ -247,14 +317,22 @@ public class RoboPatch : BaseUnityPlugin
             if (type == null) continue;
 
             var comp = obj.AddComponent(type);
+            Logger.LogInfo($"[{mod.Name}] Added component: {className}");
 
             var method = type.GetMethod("Activate",
                 BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
 
             if (method != null)
             {
-                try { method.Invoke(comp, null); }
-                catch (Exception ex) { Logger.LogError($"[{mod.Name}] Activate error: {ex}"); }
+                try
+                {
+                    method.Invoke(comp, null);
+                    Logger.LogInfo($"[{mod.Name}] Called Activate()");
+                }
+                catch (Exception ex)
+                {
+                    Logger.LogError($"[{mod.Name}] Activate error: {ex}");
+                }
             }
 
             break;
