@@ -1,55 +1,265 @@
 # RoboPatch (Alpha)
 
-RoboPatch is a patcher that allows injecting custom assets into the game Robotopia by Tomato Cake Inc.
+**RoboPatch** is a modding framework for *Robotopia* that allows you to inject and replace in-game assets at runtime.
 
-Oh yeah I ain't gonna hide it, yeah there is AI code in here but I dont know how to use C# so don't blame me >:( 
+Built using **BepInEx** and **Harmony**, RoboPatch hooks into Unity’s asset loading system and redirects it to custom content, letting you modify the game without permanently changing its files.
 
-# How does it work?
+> ⚠️ RoboPatch is still in **alpha**. It is usable, but may be slightly unstable and some features are manual.
 
-RoboPatch works by using BepInEx, A open source patcher and plugin loader for Unity based games and the Harmony libary: A library for patching, replacing and decorating .NET and Mono methods during runtime. Before the game loads its assets RoboPatch loads custom assets by tricking Unity into thinking that RoboPatch's assets are what its supposed to load and injecting the custom assets. All changes are temporary and if you delete BepInEx your game will run normally again.
+## 🚀 Features
 
-# Installation guide
+* Inject custom assets into Robotopia
+* Replace existing game assets dynamically
+* Load external **AssetBundles** at runtime
+* Patch in-game **TextAssets** using `.txt` files
+* Temporary changes (remove BepInEx to restore vanilla)
 
-* **Please keep in mind RoboPatch has not been tested on linux or macOS!**
+---
 
-## Requirements:
-* Latest Robotopia build
-* BepInEx Bleeding Edge
+## 🎮 Current Controls
 
-## Installation
+* Press **M** in-game to manually load AssetBundles
 
-First of all you need the game, which you can download from the Robotopia Discord server right here: https://discord.gg/5vQvxFNDGJ.
+> This is temporary and will be improved in future updates.
 
-Afterwards you need to download and install the latest BepInEx Bleeding Edge build, You can do so here: https://builds.bepinex.dev (The reason it uses Bleeding Edge is because Unity 6 is not supported by BepInEx Stable right now!)
+---
 
-Once you have downloaded BepInEx you need to unzip the file and paste the contents inside of the Robotopia folder after you have installed the game.
+## ⚙️ How It Works
 
-**IMPORTANT**: You need to run the game at least *ONCE* for BepInEx to create the necessary files.
+RoboPatch uses:
 
-Once BepInEx is installed you just need to download the latest release of RoboPatch from... well... the Releases page. Once you downloaded it, Unzip the folder and put it inside of the folder you installed Robotopia and BepInEx and merge the folders. 
+* **BepInEx** – a Unity plugin framework
+* **Harmony** – a runtime patching library
 
-**Hooray, You now have RoboPatch installed!**
+Before the game loads its assets, RoboPatch intercepts the process and substitutes your custom assets in place of the originals.
 
-Right now all RoboPatch does is allow you to change "SystemPrompt" using a text file inside the same directory... sad but its because this is more of a "Proof of concept" than a finished polished modloader or something... BUT if you want to help make it a finished polished modloader you can help contribute!
+This means:
 
-# How to contribute
+* No permanent file modification
+* Fully reversible changes
+* Flexible modding possibilities
 
-If you don't know how to clone a repo... look here: https://docs.github.com/en/repositories/creating-and-managing-repositories/cloning-a-repository
+---
 
-All you gotta do to contribute is to clone the repo, Make your changes, and make a pull request to the repo where I will review it and see if its a good change.
+## 📦 Installation Guide
 
-Oh yeah, You need the .dll files in RoboPatch.csproj, You can find all of these inside BepInEx/core and Robotopia_Data/Managed. Just use your file explorers search tool and put all the .dll files in your local cloned repo's root directory.
+> ⚠️ RoboPatch has not been tested on Linux or macOS.
 
-If you want some suggestions for changes it would be nice if:
-* We had a better README
-* The code is more stable and allows people to actually use it as a foundation to build good mods
-* Tbh all I can think about, if your reading this you can just make a pull request and add your suggestion lol.
+### Requirements
 
-# Credits
-* Robotopia Dev team / Tomato Cake Inc: For allowing me to create this project. https://discord.gg/5vQvxFNDGJ
-* BepInEx team: For the whole weird patch framework. https://github.com/BepInEx/BepInEx
-* Harmony team: For the weird patch... libary?? https://github.com/pardeike/Harmony
-* Cinematic Unity Explorer team: For the tool I used to build this thing. https://github.com/originalnicodr/CinematicUnityExplorer
+* Latest *Robotopia* build
+* BepInEx **Bleeding Edge**
 
+### Steps
 
+1. Download *Robotopia* from Discord:
+   [https://discord.gg/5vQvxFNDGJ](https://discord.gg/5vQvxFNDGJ)
 
+2. Download BepInEx Bleeding Edge:
+   [https://builds.bepinex.dev](https://builds.bepinex.dev)
+
+3. Extract BepInEx into your Robotopia folder
+
+4. Run the game **once** to generate required files
+
+5. Download the latest RoboPatch release from **Releases**
+
+6. **Extract RoboPatch** and place the **entire RoboPatch folder** inside:
+
+```text
+/Robotopia/BepInEx/plugins/
+```
+
+> RoboPatch will now load automatically when you start the game. Press **M** in-game to load your AssetBundles.
+
+---
+
+## 🧪 Current State
+
+RoboPatch is **functional and usable**, but still evolving.
+
+Limitations:
+
+* AssetBundles must be loaded manually (press **M**)
+* Some instability may occur
+* Limited tooling/UI
+
+---
+
+## 📂 Mod Folder Structure
+
+To add a new mod to RoboPatch:
+
+```text
+/RoboPatch
+   /bundles
+      /ExampleMod
+         example.bundle      ← Your AssetBundle(s)
+         load.cfg             ← Mandatory configuration file
+   /scripts
+      ExampleMod.dll         ← Mod scripts (must match the mod folder name)
+```
+
+**Rules:**
+
+* Each mod gets its **own folder** under `/bundles`
+* AssetBundles go inside that folder
+* A **`load.cfg` file is mandatory** for every mod
+* Mod scripts must be a **compiled DLL** in `/scripts`
+
+  * The DLL **name must match the mod folder name**
+  * e.g., `ExampleMod.dll` inside `/RoboPatch/scripts/`
+* Press **M** in-game to load all AssetBundles
+
+---
+
+## ⚙️ Mod Configuration (`load.cfg`)
+
+Every AssetBundle must have a corresponding `load.cfg` in the same folder as the bundle. Example:
+
+```text
+/RoboPatch
+   /bundles
+      /ExampleMod
+         example.bundle
+         load.cfg
+   /scripts
+      ExampleMod.dll
+```
+
+Example `load.cfg` content:
+
+```text
+bundle = example.bundle
+asset = Assets/Example.prefab
+script = ExampleMod.dll
+scriptClass = RoboPatch.Example
+```
+
+**Fields explained:**
+
+* `bundle` – The AssetBundle file to load
+* `asset` – Path to the asset inside the bundle (e.g., prefab path)
+* `script` – The compiled DLL for the mod (from `/scripts`)
+* `scriptClass` – The fully qualified class name inside the DLL that RoboPatch should instantiate
+
+> RoboPatch uses this file to know **which assets to load and which mod scripts to execute**.
+> **`load.cfg` is mandatory for every mod**, even if it only contains one bundle.
+
+---
+
+## 📄 Patching TextAssets
+
+RoboPatch allows you to **override in-game TextAssets** using plain `.txt` files.
+
+**How it works:**
+
+1. The `.txt` file name **must match the exact name** of the TextAsset in the game (case-sensitive).
+2. Place your `.txt` file inside the `/RoboPatch/textassets` folder.
+3. RoboPatch will automatically load it and override the original asset.
+
+**Tip:**
+
+* You can use tools like **Cinematic Unity Explorer** to look up TextAsset names, such as `Bio` or `SystemPrompt`.
+* Example: To override `SystemPrompt`, create `/RoboPatch/textassets/SystemPrompt.txt` with your custom content.
+
+---
+
+## 🛠 Development / Building
+
+If you want to compile RoboPatch yourself or contribute:
+
+1. **Clone the repository**:
+
+```bash
+git clone https://github.com/yourusername/RoboPatch.git
+```
+
+2. **Set up project references**:
+
+Make sure the `.csproj` references DLLs from:
+
+**Robotopia (`Robotopia_Data/Managed`)**:
+
+* `UnityEngine.dll`
+* `UnityEngine.CoreModule.dll`
+* `UnityEngine.AssetBundleModule.dll`
+* `UnityEngine.InputLegacyModule.dll`
+* `UnityEngine.UI.dll`
+* `UnityEngine.UIModule.dll`
+* `UnityEngine.TextRenderingModule.dll`
+
+**BepInEx (`BepInEx/core`)**:
+
+* `BepInEx.Core.dll`
+* `BepInEx.Unity.Mono.dll`
+* `0Harmony.dll`
+
+> 💡 Hint: Place all DLLs in your project root or adjust `<HintPath>` in `RoboPatch.csproj` accordingly.
+
+3. **Build the project**:
+
+* Open the `.csproj` in Visual Studio, Rider, or VSCode
+* Restore NuGet packages if prompted
+* Build → outputs `RoboPatch.dll` in `/bin/Debug` or `/bin/Release`
+
+4. **Deploy your mod**:
+
+* Copy `RoboPatch.dll` into your Robotopia + BepInEx `plugins` folder
+* Run the game, press **M**, enjoy your mod
+
+---
+
+## 🤝 Contributing
+
+Want to help improve RoboPatch?
+
+1. Clone the repository
+2. Make your changes
+3. Submit a pull request
+
+GitHub guide:
+[https://docs.github.com/en/repositories/creating-and-managing-repositories/cloning-a-repository](https://docs.github.com/en/repositories/creating-and-managing-repositories/cloning-a-repository)
+
+### Dev Notes
+
+* You need `.dll` files from BepInEx and Robotopia as mentioned above
+* Make pull requests small and descriptive — helps faster review
+
+---
+
+## 🛑 Support / Issues
+
+RoboPatch is an **unofficial modding framework**.
+
+* **Do not contact the Robotopia developers** for help with RoboPatch
+* If you encounter bugs or issues, **open an issue** on this repository
+* If you can fix a problem, **submit a pull request** so everyone benefits
+
+> This helps keep support organized and ensures the official game devs aren’t bothered with modding issues.
+
+---
+
+## 💡 Suggestions / TODO
+
+* Improve stability
+* Add automatic AssetBundle loading
+* Create a proper mod API
+* Better documentation
+* UI for managing mods
+
+---
+
+## 🙏 Credits
+
+* Robotopia Dev Team / Tomato Cake Inc: [https://discord.gg/5vQvxFNDGJ](https://discord.gg/5vQvxFNDGJ)
+* BepInEx Team: [https://github.com/BepInEx/BepInEx](https://github.com/BepInEx/BepInEx)
+* Harmony: [https://github.com/pardeike/Harmony](https://github.com/pardeike/Harmony)
+* Cinematic Unity Explorer: [https://github.com/originalnicodr/CinematicUnityExplorer](https://github.com/originalnicodr/CinematicUnityExplorer)
+
+---
+
+yeah there is some AI-generated code in here
+i’m learning C# as I go 👍
+
+---
