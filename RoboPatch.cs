@@ -4,20 +4,21 @@ using HarmonyLib;
 using UnityEngine;
 using UnityEngine.UI;
 using UnityEngine.SceneManagement;
+using UnityEngine.EventSystems;
 using System.IO;
 using System.Collections.Generic;
 using System;
 using System.Reflection;
-using System.Net.Http;
 using System.Threading.Tasks;
+using System.Net.Http;
+using System.Net.Http.Headers;
 
-[BepInPlugin("com.stinkymonkey36.RoboPatch", "RoboPatch", "1.2.0")]
+[BepInPlugin("com.stinkymonkey36.RoboPatch", "RoboPatch", "2.0.1")]
 public class RoboPatch : BaseUnityPlugin
 {
-    private const string CURRENT_VERSION = "1.2.0";
-    private const string VERSION_URL = "https://raw.githubusercontent.com/Stinkymonkey32/RoboPatch/main/version.txt";
+    private const string CURRENT_VERSION = "2.0.1";
+    private const string VERSION_URL = "https://raw.githubusercontent.com/Stinkymonkey32/RoboPatch/main/version.xml"; // now just raw version string
 
-    // ───────── Mod Context ─────────
     class ModContext
     {
         public string Name;
@@ -28,13 +29,13 @@ public class RoboPatch : BaseUnityPlugin
     }
 
     private List<ModContext> mods = new();
-
     private string bundlesFolder;
     private string scriptsFolder;
 
-    // ───────── UI ─────────
+    // UI
     private GameObject popupPanel;
     private Text popupText;
+    private GameObject openButton;
     private string pendingUpdateURL;
 
     void Awake()
@@ -60,72 +61,72 @@ public class RoboPatch : BaseUnityPlugin
 
         LoadBundlesAndScripts();
 
-        _ = CheckForUpdates(); // 🔥 async update check
+        _ = CheckForUpdates();
     }
 
     // ───────── UPDATE SYSTEM ─────────
-
     private async Task CheckForUpdates()
     {
+        if (popupPanel != null) popupPanel.SetActive(false);
+        pendingUpdateURL = null;
+
+        const string hardcodedUrl = "https://github.com/Stinkymonkey32/RoboPatch/releases/latest";
+
         try
         {
+            await Task.Delay(500); // allow network to initialize
+
             using var client = new HttpClient();
-            client.Timeout = TimeSpan.FromSeconds(5);
+            client.DefaultRequestHeaders.CacheControl = new CacheControlHeaderValue { NoCache = true, NoStore = true };
+            client.DefaultRequestHeaders.Pragma.ParseAdd("no-cache");
+            client.DefaultRequestHeaders.UserAgent.ParseAdd("RoboPatchUpdateChecker/1.0");
 
+            // Fetch the "XML" (actually just the plain version string)
             string text = await client.GetStringAsync(VERSION_URL);
+            string latestVersion = text.Trim(); // just trim whitespace/newlines
 
-            string latestVersion = null;
-            string url = null;
+            Logger.LogInfo($"Fetched latest version: '{latestVersion}'");
 
-            foreach (var line in text.Split('\n'))
-            {
-                var trimmed = line.Trim();
-                if (!trimmed.Contains("=")) continue;
-
-                var parts = trimmed.Split('=');
-                if (parts[0] == "version")
-                    latestVersion = parts[1];
-                else if (parts[0] == "url")
-                    url = parts[1];
-            }
-
-            Logger.LogInfo($"Update check → Current: {CURRENT_VERSION}, Latest: {latestVersion}");
-
-            if (latestVersion != null && IsNewerVersion(latestVersion, CURRENT_VERSION))
-            {
-                ShowUpdatePopup(latestVersion, url);
-            }
+            if (latestVersion != CURRENT_VERSION)
+                ShowUpdatePopup(latestVersion, hardcodedUrl);
+            else
+                ShowMessagePopup("RoboPatch is installed and up to date!");
         }
         catch (Exception ex)
         {
             Logger.LogWarning($"Update check failed: {ex.Message}");
+            ShowMessagePopup("Update check failed.\nNo internet?");
         }
-    }
-
-    private bool IsNewerVersion(string latest, string current)
-    {
-        try
-        {
-            return new Version(latest) > new Version(current);
-        }
-        catch { return false; }
     }
 
     private void ShowUpdatePopup(string newVersion, string url)
     {
         pendingUpdateURL = url;
 
-        if (popupText != null)
-        {
-            popupText.text =
-                $"Update Available!\n\nCurrent: {CURRENT_VERSION}\nLatest: {newVersion}";
-        }
+        popupText.text =
+            $"RoboPatch update available!\n\nCurrent: {CURRENT_VERSION}\nLatest: {newVersion}";
+
+        if (openButton != null)
+            openButton.SetActive(!string.IsNullOrEmpty(url));
+
+        popupPanel.SetActive(true);
+    }
+
+    private void ShowMessagePopup(string message)
+    {
+        if (popupPanel != null)
+            popupPanel.SetActive(false);
+
+        pendingUpdateURL = null;
+        popupText.text = message;
+
+        if (openButton != null)
+            openButton.SetActive(false);
 
         popupPanel.SetActive(true);
     }
 
     // ───────── LOAD SYSTEM ─────────
-
     private void LoadBundlesAndScripts()
     {
         foreach (var bundleSubFolder in Directory.GetDirectories(bundlesFolder))
@@ -137,14 +138,8 @@ public class RoboPatch : BaseUnityPlugin
 
             foreach (var bundleFile in Directory.GetFiles(bundleSubFolder, "*.bundle"))
             {
-                try
-                {
-                    mod.Bundle = AssetBundle.LoadFromFile(bundleFile);
-                }
-                catch (Exception ex)
-                {
-                    Logger.LogError($"[{modName}] Bundle error: {ex}");
-                }
+                try { mod.Bundle = AssetBundle.LoadFromFile(bundleFile); }
+                catch (Exception ex) { Logger.LogError($"[{modName}] Bundle error: {ex}"); }
             }
 
             string scriptSubFolder = Path.Combine(scriptsFolder, modName);
@@ -152,14 +147,8 @@ public class RoboPatch : BaseUnityPlugin
             {
                 foreach (var dllFile in Directory.GetFiles(scriptSubFolder, "*.dll"))
                 {
-                    try
-                    {
-                        mod.Assemblies.Add(Assembly.LoadFrom(dllFile));
-                    }
-                    catch (Exception ex)
-                    {
-                        Logger.LogError($"[{modName}] DLL error: {ex}");
-                    }
+                    try { mod.Assemblies.Add(Assembly.LoadFrom(dllFile)); }
+                    catch (Exception ex) { Logger.LogError($"[{modName}] DLL error: {ex}"); }
                 }
             }
 
@@ -184,13 +173,10 @@ public class RoboPatch : BaseUnityPlugin
         }
 
         if (mod.Config.TryGetValue("asset", out string asset) && mod.Bundle != null)
-        {
             mod.Prefab = mod.Bundle.LoadAsset<GameObject>(asset);
-        }
     }
 
     // ───────── SPAWNING ─────────
-
     void Update()
     {
         if (Input.GetKeyDown(KeyCode.M))
@@ -204,11 +190,8 @@ public class RoboPatch : BaseUnityPlugin
     {
         foreach (var mod in mods)
         {
-            if (!mod.Config.TryGetValue("spawn", out string spawnMode))
-                continue;
-
-            if (!spawnMode.Equals("auto", StringComparison.OrdinalIgnoreCase))
-                continue;
+            if (!mod.Config.TryGetValue("spawn", out string spawnMode)) continue;
+            if (!spawnMode.Equals("auto", StringComparison.OrdinalIgnoreCase)) continue;
 
             if (mod.Config.TryGetValue("scene", out string sceneName))
             {
@@ -272,7 +255,6 @@ public class RoboPatch : BaseUnityPlugin
     }
 
     // ───────── UI ─────────
-
     private void CreatePopupUI()
     {
         var canvasGO = new GameObject("RoboPatchCanvas");
@@ -285,6 +267,13 @@ public class RoboPatch : BaseUnityPlugin
         canvasGO.AddComponent<CanvasScaler>();
         canvasGO.AddComponent<GraphicRaycaster>();
 
+        if (UnityEngine.Object.FindFirstObjectByType<EventSystem>() == null)
+        {
+            var es = new GameObject("EventSystem");
+            es.AddComponent<EventSystem>();
+            es.AddComponent<StandaloneInputModule>();
+        }
+
         popupPanel = new GameObject("PopupPanel");
         popupPanel.transform.SetParent(canvasGO.transform, false);
 
@@ -296,7 +285,6 @@ public class RoboPatch : BaseUnityPlugin
         rect.anchorMin = rect.anchorMax = new Vector2(0.5f, 0.5f);
         rect.anchoredPosition = Vector2.zero;
 
-        // TEXT
         var textGO = new GameObject("Text");
         textGO.transform.SetParent(popupPanel.transform, false);
 
@@ -310,8 +298,7 @@ public class RoboPatch : BaseUnityPlugin
         tRect.sizeDelta = new Vector2(380, 120);
         tRect.anchoredPosition = new Vector2(0, 40);
 
-        // BUTTONS
-        CreateButton("Open GitHub", new Vector2(-80, -70), () =>
+        openButton = CreateButton("Open GitHub", new Vector2(-80, -70), () =>
         {
             if (!string.IsNullOrEmpty(pendingUpdateURL))
                 Application.OpenURL(pendingUpdateURL);
@@ -325,7 +312,7 @@ public class RoboPatch : BaseUnityPlugin
         popupPanel.SetActive(false);
     }
 
-    private void CreateButton(string label, Vector2 pos, Action onClick, Transform parent)
+    private GameObject CreateButton(string label, Vector2 pos, Action onClick, Transform parent)
     {
         var btnGO = new GameObject(label);
         btnGO.transform.SetParent(parent, false);
@@ -351,5 +338,7 @@ public class RoboPatch : BaseUnityPlugin
 
         var tRect = txtGO.GetComponent<RectTransform>();
         tRect.sizeDelta = rect.sizeDelta;
+
+        return btnGO;
     }
 }
