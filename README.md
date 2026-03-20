@@ -1,3 +1,5 @@
+---
+
 # RoboPatch (Alpha)
 
 **RoboPatch** is a modding framework for *Robotopia* that allows you to inject and replace in-game assets at runtime.
@@ -5,6 +7,8 @@
 Built using **BepInEx** and **Harmony**, RoboPatch hooks into Unity’s asset loading system and redirects it to custom content, letting you modify the game without permanently changing its files.
 
 > ⚠️ RoboPatch is still in **alpha**. It is usable, but may be slightly unstable and some features are manual.
+
+---
 
 ## 🚀 Features
 
@@ -18,9 +22,10 @@ Built using **BepInEx** and **Harmony**, RoboPatch hooks into Unity’s asset lo
 
 ## 🎮 Current Controls
 
-* Press **M** in-game to manually load AssetBundles
+* Press **M** in-game to manually spawn assets
 
-> This is temporary and will be improved in future updates.
+  * Only works for mods with `spawn=manual` in their `load.cfg`
+* Mods with `spawn=automatic` will load assets automatically without pressing **M**
 
 ---
 
@@ -31,9 +36,7 @@ RoboPatch uses:
 * **BepInEx** – a Unity plugin framework
 * **Harmony** – a runtime patching library
 
-Before the game loads its assets, RoboPatch intercepts the process and substitutes your custom assets in place of the originals.
-
-This means:
+Before the game loads its assets, RoboPatch intercepts the process and substitutes your custom assets in place of the originals. This means:
 
 * No permanent file modification
 * Fully reversible changes
@@ -66,23 +69,11 @@ This means:
 
 6. **Extract RoboPatch** and place the **entire RoboPatch folder** inside:
 
-```text
+```text id="l0bh2n"
 /Robotopia/BepInEx/plugins/
 ```
 
-> RoboPatch will now load automatically when you start the game. Press **M** in-game to load your AssetBundles.
-
----
-
-## 🧪 Current State
-
-RoboPatch is **functional and usable**, but still evolving.
-
-Limitations:
-
-* AssetBundles must be loaded manually (press **M**)
-* Some instability may occur
-* Limited tooling/UI
+> RoboPatch will now load automatically when you start the game.
 
 ---
 
@@ -90,78 +81,72 @@ Limitations:
 
 To add a new mod to RoboPatch:
 
-```text
-/RoboPatch
-   /bundles
+```text id="1jem7l"
+/Robotopia
+   /mods
       /ExampleMod
-         example.bundle      ← Your AssetBundle(s)
-         load.cfg             ← Mandatory configuration file
-   /scripts
-      ExampleMod.dll         ← Mod scripts (must match the mod folder name)
+         ExampleMod.dll      ← Mod script
+         example.bundle      ← AssetBundle
+         load.cfg            ← Configuration file for asset/script
 ```
 
 **Rules:**
 
-* Each mod gets its **own folder** under `/bundles`
-* AssetBundles go inside that folder
-* A **`load.cfg` file is mandatory** for every mod
-* Mod scripts must be a **compiled DLL** in `/scripts`
-
-  * The DLL **name must match the mod folder name**
-  * e.g., `ExampleMod.dll` inside `/RoboPatch/scripts/`
-* Press **M** in-game to load all AssetBundles
+* Each mod gets its **own folder** under `/mods`
+* Scripts (DLLs) and AssetBundles go **directly in the mod folder**
+* RoboPatch automatically loads **everything in the mod folder** on startup
 
 ---
 
 ## ⚙️ Mod Configuration (`load.cfg`)
 
-Every AssetBundle must have a corresponding `load.cfg` in the same folder as the bundle. Example:
+Example `load.cfg`:
 
-```text
-/RoboPatch
-   /bundles
-      /ExampleMod
-         example.bundle
-         load.cfg
-   /scripts
-      ExampleMod.dll
-```
-
-Example `load.cfg` content:
-
-```text
-bundle = example.bundle
-asset = Assets/Example.prefab
-script = ExampleMod.dll
-scriptClass = RoboPatch.Example
+```text id="q12yk4"
+# Example load.cfg
+asset=example.bundle
+spawn=manual
+scene=City Streets
+position=0,1,0
+scriptClass=Example
 ```
 
 **Fields explained:**
 
-* `bundle` – The AssetBundle file to load
-* `asset` – Path to the asset inside the bundle (e.g., prefab path)
-* `script` – The compiled DLL for the mod (from `/scripts`)
-* `scriptClass` – The fully qualified class name inside the DLL that RoboPatch should instantiate
+* `asset` – The AssetBundle file to load
+* `spawn` – Spawn behavior (`manual` or `automatic`)
+* `scene` – Scene to spawn the asset in (exact name/path required)
+* `position` – Vector3 position in the scene
+* `scriptClass` – The fully qualified class name inside the DLL to instantiate
 
-> RoboPatch uses this file to know **which assets to load and which mod scripts to execute**.
-> **`load.cfg` is mandatory for every mod**, even if it only contains one bundle.
+> RoboPatch reads this file to know **which asset bundle to load, where to spawn it, and which mod script to run**.
+
+**Tip:** Scene names must match exactly as they appear in Robotopia, including sub-location paths separated by slashes.
 
 ---
 
-## 📄 Patching TextAssets
+## 📄 Overriding TextAssets
 
-RoboPatch allows you to **override in-game TextAssets** using plain `.txt` files.
+RoboPatch allows you to **replace in-game TextAssets** using plain `.txt` files.
 
-**How it works:**
+**How to do it:**
 
-1. The `.txt` file name **must match the exact name** of the TextAsset in the game (case-sensitive).
-2. Place your `.txt` file inside the `/RoboPatch/textassets` folder.
-3. RoboPatch will automatically load it and override the original asset.
+1. Place your `.txt` file inside the `/textassets` folder:
 
-**Tip:**
+```text id="878pxs"
+/Robotopia
+   /textassets
+       SystemPrompt.txt
+       Bio.txt
+```
 
-* You can use tools like **Cinematic Unity Explorer** to look up TextAsset names, such as `Bio` or `SystemPrompt`.
-* Example: To override `SystemPrompt`, create `/RoboPatch/textassets/SystemPrompt.txt` with your custom content.
+2. The **file name must exactly match** the in-game TextAsset name (case-sensitive)
+3. RoboPatch will automatically load these files and override the originals
+
+**Tip for modding and contributing:**
+
+* Use **[Cinematic Unity Explorer](https://github.com/originalnicodr/CinematicUnityExplorer)** to explore the game’s assets and find exact TextAsset names.
+* This makes building mods and contributing much easier.
 
 ---
 
@@ -171,7 +156,7 @@ If you want to compile RoboPatch yourself or contribute:
 
 1. **Clone the repository**:
 
-```bash
+```bash id="7fdd37"
 git clone https://github.com/yourusername/RoboPatch.git
 ```
 
@@ -195,18 +180,16 @@ Make sure the `.csproj` references DLLs from:
 * `BepInEx.Unity.Mono.dll`
 * `0Harmony.dll`
 
-> 💡 Hint: Place all DLLs in your project root or adjust `<HintPath>` in `RoboPatch.csproj` accordingly.
-
 3. **Build the project**:
 
 * Open the `.csproj` in Visual Studio, Rider, or VSCode
 * Restore NuGet packages if prompted
-* Build → outputs `RoboPatch.dll` in `/bin/Debug` or `/bin/Release`
+* Build → outputs `yourmod.dll` in `/bin/Debug` or `/bin/Release`
 
 4. **Deploy your mod**:
 
-* Copy `RoboPatch.dll` into your Robotopia + BepInEx `plugins` folder
-* Run the game, press **M**, enjoy your mod
+* Copy `yourmod.dll` into Robotopia/BepInEx/plugins/RoboPatch/mods/yourmodfolder
+* Run the game, and RoboPatch will automatically load your mods and assets
 
 ---
 
@@ -218,13 +201,8 @@ Want to help improve RoboPatch?
 2. Make your changes
 3. Submit a pull request
 
-GitHub guide:
-[https://docs.github.com/en/repositories/creating-and-managing-repositories/cloning-a-repository](https://docs.github.com/en/repositories/creating-and-managing-repositories/cloning-a-repository)
-
-### Dev Notes
-
-* You need `.dll` files from BepInEx and Robotopia as mentioned above
-* Make pull requests small and descriptive — helps faster review
+> Keep pull requests small and descriptive — helps faster review.
+> Use **Cinematic Unity Explorer** to explore game assets for building mods.
 
 ---
 
@@ -236,17 +214,14 @@ RoboPatch is an **unofficial modding framework**.
 * If you encounter bugs or issues, **open an issue** on this repository
 * If you can fix a problem, **submit a pull request** so everyone benefits
 
-> This helps keep support organized and ensures the official game devs aren’t bothered with modding issues.
-
 ---
 
 ## 💡 Suggestions / TODO
 
 * Improve stability
-* Add automatic AssetBundle loading
+* Add automatic AssetBundle reloading / UI
 * Create a proper mod API
 * Better documentation
-* UI for managing mods
 
 ---
 
@@ -256,10 +231,5 @@ RoboPatch is an **unofficial modding framework**.
 * BepInEx Team: [https://github.com/BepInEx/BepInEx](https://github.com/BepInEx/BepInEx)
 * Harmony: [https://github.com/pardeike/Harmony](https://github.com/pardeike/Harmony)
 * Cinematic Unity Explorer: [https://github.com/originalnicodr/CinematicUnityExplorer](https://github.com/originalnicodr/CinematicUnityExplorer)
-
----
-
-yeah there is some AI-generated code in here
-i’m learning C# as I go 👍
 
 ---
