@@ -4,7 +4,7 @@
 
 Built using **BepInEx** and **Harmony**, it hooks into Unity’s asset loading system and redirects it to custom content, letting you modify the game without permanently changing its files.
 
-> ⚠️ **RoboPatch is still in alpha.** It is usable, but some features are still evolving.
+> ⚠️ **RoboPatch is still in alpha.** It is usable, but some systems are still evolving.
 
 ---
 
@@ -12,9 +12,9 @@ Built using **BepInEx** and **Harmony**, it hooks into Unity’s asset loading s
 
 * Inject custom assets into *Robotopia* at runtime
 * Replace existing game assets dynamically
-* Load external **AssetBundles** at runtime
-* Patch in-game **TextAssets** using `.txt` files
-* AI prompt overrides via `prompts/` system
+* Load multiple **AssetBundles per mod**
+* Patch in-game **TextAssets** using `.txt` overrides
+* AI prompt override system via `prompts/`
 * Manifest-based mod loading (`manifest.json`)
 * Fully reversible changes (no permanent file modification)
 
@@ -26,7 +26,7 @@ Built using **BepInEx** and **Harmony**, it hooks into Unity’s asset loading s
 
   * Works for mods with `spawn.mode = "manual"` in `manifest.json`
 
-* Mods with `spawn.mode = "automatic"` will spawn automatically when the scene loads
+* Mods with `spawn.mode = "automatic"` will spawn automatically on scene load
 
 ---
 
@@ -34,15 +34,15 @@ Built using **BepInEx** and **Harmony**, it hooks into Unity’s asset loading s
 
 RoboPatch uses:
 
-* **BepInEx** – Unity plugin framework for modding
-* **Harmony** – runtime patching system for hooking Unity asset loading
+* **BepInEx** – Unity modding framework
+* **Harmony** – runtime patching system
 
-Before the game loads its assets, RoboPatch intercepts the process and substitutes custom content where defined. This allows:
+It intercepts asset loading and replaces or injects modded content dynamically, allowing:
 
 * No permanent file modification
-* Fully reversible changes
-* Modular mod loading system
-* Flexible AI + asset + code injection
+* Modular mod system
+* Multi-asset bundle support
+* Runtime AI prompt modification
 
 ---
 
@@ -50,14 +50,14 @@ Before the game loads its assets, RoboPatch intercepts the process and substitut
 
 > ⚠️ RoboPatch has not been tested on Linux or macOS.
 
-### **Requirements:**
+### Requirements:
 
 * Latest *Robotopia* build
 * **BepInEx Bleeding Edge** version
 
 ---
 
-### **Steps:**
+### Steps:
 
 1. Download *Robotopia* from Discord:
    [https://discord.gg/5vQvxFNDGJ](https://discord.gg/5vQvxFNDGJ)
@@ -67,11 +67,11 @@ Before the game loads its assets, RoboPatch intercepts the process and substitut
 
 3. Extract BepInEx into your *Robotopia* folder
 
-4. Run the game once to generate required files
+4. Run the game once
 
-5. Download the latest **RoboPatch** release
+5. Download RoboPatch release
 
-6. Place RoboPatch DLL inside:
+6. Place DLL into:
 
 ```text
 /Robotopia/BepInEx/plugins/
@@ -79,9 +79,9 @@ Before the game loads its assets, RoboPatch intercepts the process and substitut
 
 ---
 
-## 📂 Mod Folder Structure (NEW SYSTEM)
+## 📂 Mod Folder Structure (CURRENT SYSTEM)
 
-Each mod now uses a **manifest-based structure**:
+Each mod uses a **manifest-driven structure**:
 
 ```text
 /Robotopia
@@ -91,6 +91,7 @@ Each mod now uses a **manifest-based structure**:
 
       bundles/
         example.bundle
+        extra.bundle   ← multiple supported
 
       dll/
         ExampleMod.dll
@@ -126,21 +127,19 @@ Example:
 
 ---
 
-### **Fields explained:**
+### Fields explained:
 
-* `asset` – AssetBundle prefab name to load
+* `asset` – Prefab name inside any loaded AssetBundle
 * `spawn.mode` – `manual` or `automatic`
 * `spawn.scene` – Scene name to spawn in
-* `spawn.position` – XYZ spawn position
-* `scriptClass` – Fully qualified DLL class to attach
+* `spawn.position` – XYZ position
+* `scriptClass` – DLL class to attach to spawned object
 
 ---
 
-## 💬 Prompt System (NEW)
+## 💬 Prompt System (AI BEHAVIOR OVERRIDES)
 
-RoboPatch supports AI behavior overrides using the `prompts/` folder.
-
-### Structure:
+RoboPatch supports AI behavior modification via:
 
 ```text
 /prompts
@@ -151,27 +150,36 @@ RoboPatch supports AI behavior overrides using the `prompts/` folder.
 
 ### How it works:
 
-* File name = prompt key
-* RoboPatch loads these at runtime
+* Each file name = prompt key
+* Loaded into runtime override cache
 * Overrides in-game AI TextAssets or behavior prompts
 
-> Example: `personality.txt` can redefine robot behavior style.
+> Example: `personality.txt` changes robot personality behavior.
 
 ---
 
 ## 📄 TextAsset Overrides
 
-You can still override game TextAssets using `.txt` files.
+You can override in-game TextAssets using `.txt` files.
 
 ### How:
 
-1. Place `.txt` inside your mod folder (legacy system still supported):
+1. Place `.txt` inside:
 
 ```text
-/prompts or /textassets (legacy fallback)
+/Mods/ExampleMod/prompts/
 ```
 
-2. File name must match the in-game TextAsset name exactly.
+2. File name must match the in-game TextAsset name exactly
+
+3. RoboPatch replaces it at runtime
+
+---
+
+## 🧠 Important Note
+
+* `textassets/` folder is **deprecated**
+* Use `prompts/` instead for all text overrides
 
 ---
 
@@ -185,7 +193,7 @@ git clone https://github.com/yourusername/RoboPatch.git
 
 ---
 
-### 2. Required references
+### 2. References required
 
 From **Robotopia_Data/Managed**:
 
@@ -206,7 +214,7 @@ From **BepInEx/core**:
 
 * Open `.csproj` in Visual Studio / Rider
 * Build solution
-* Output goes to `/bin/Release`
+* Output in `/bin/Release`
 
 ---
 
@@ -222,11 +230,11 @@ Copy DLL to:
 
 ## 🤝 Contributing
 
-1. Fork repository
-2. Make changes
-3. Submit pull request
+* Fork repo
+* Make changes
+* Submit pull request
 
-Keep changes small and focused.
+Keep changes focused and minimal.
 
 ---
 
@@ -234,7 +242,7 @@ Keep changes small and focused.
 
 * Do NOT contact Robotopia devs for RoboPatch issues
 * Use GitHub issues for bugs
-* PRs welcome for fixes or improvements
+* PRs welcome
 
 ---
 
@@ -244,7 +252,7 @@ Keep changes small and focused.
 * Prompt stacking (base + mod + scene)
 * Mod enable/disable menu
 * Hot reload system
-* API for external tools
+* Public mod API
 
 ---
 
@@ -254,5 +262,3 @@ Keep changes small and focused.
 * BepInEx: [https://github.com/BepInEx/BepInEx](https://github.com/BepInEx/BepInEx)
 * Harmony: [https://github.com/pardeike/Harmony](https://github.com/pardeike/Harmony)
 * Cinematic Unity Explorer: [https://github.com/originalnicodr/CinematicUnityExplorer](https://github.com/originalnicodr/CinematicUnityExplorer)
-
----
