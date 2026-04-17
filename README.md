@@ -16,6 +16,7 @@ Built using **BepInEx** and **Harmony**, it hooks into Unity’s asset loading s
 * Patch in-game **TextAssets** using `.txt` overrides
 * AI prompt override system via `prompts/`
 * Manifest-based mod loading (`manifest.json`)
+* Multi-scene spawn rules per mod
 * Fully reversible changes (no permanent file modification)
 
 ---
@@ -24,9 +25,9 @@ Built using **BepInEx** and **Harmony**, it hooks into Unity’s asset loading s
 
 * Press **M** in-game to manually spawn assets
 
-  * Works for mods with `spawn.mode = "manual"` in `manifest.json`
+  * Works for spawn rules with `"mode": "manual"` in `manifest.json`
 
-* Mods with `spawn.mode = "automatic"` will spawn automatically on scene load
+* Automatic spawn rules execute on scene load when scene matches rule list
 
 ---
 
@@ -42,6 +43,7 @@ It intercepts asset loading and replaces or injects modded content dynamically, 
 * No permanent file modification
 * Modular mod system
 * Multi-asset bundle support
+* Rule-based spawning system
 * Runtime AI prompt modification
 
 ---
@@ -91,7 +93,7 @@ Each mod uses a **manifest-driven structure**:
 
       bundles/
         example.bundle
-        extra.bundle   ← multiple supported
+        extra.bundle
 
       dll/
         ExampleMod.dll
@@ -113,13 +115,26 @@ Example:
   "name": "ExampleMod",
   "version": "1.0.0",
 
-  "asset": "ExamplePrefab",
+  "bundles": [
+    "example.bundle",
+    "extra.bundle"
+  ],
 
-  "spawn": {
-    "mode": "manual",
-    "scene": "City Streets",
-    "position": [0, 1, 0]
-  },
+  "assets": [
+    {
+      "name": "ExamplePrefab",
+      "type": "prefab"
+    }
+  ],
+
+  "spawns": [
+    {
+      "asset": "ExamplePrefab",
+      "mode": "manual",
+      "scenes": ["City Streets"],
+      "position": [0, 1, 0]
+    }
+  ],
 
   "scriptClass": "ExampleMod.Main"
 }
@@ -129,11 +144,14 @@ Example:
 
 ### Fields explained:
 
-* `asset` – Prefab name inside any loaded AssetBundle
-* `spawn.mode` – `manual` or `automatic`
-* `spawn.scene` – Scene name to spawn in
-* `spawn.position` – XYZ position
-* `scriptClass` – DLL class to attach to spawned object
+* `bundles` – List of AssetBundles to load for the mod
+* `assets` – Registered asset names used for lookup
+* `spawns` – List of spawn rules (supports multiple per mod)
+* `asset` – Prefab name inside loaded bundles
+* `mode` – `manual` or `automatic`
+* `scenes` – Scenes where the spawn rule applies
+* `position` – XYZ spawn position
+* `scriptClass` – DLL class attached to spawned object
 
 ---
 
@@ -151,10 +169,8 @@ RoboPatch supports AI behavior modification via:
 ### How it works:
 
 * Each file name = prompt key
-* Loaded into runtime override cache
-* Overrides in-game AI TextAssets or behavior prompts
-
-> Example: `personality.txt` changes robot personality behavior.
+* Loaded at runtime into override cache
+* Overrides in-game TextAssets or AI prompts
 
 ---
 
@@ -164,7 +180,7 @@ You can override in-game TextAssets using `.txt` files.
 
 ### How:
 
-1. Place `.txt` inside:
+1. Place `.txt` files inside:
 
 ```text
 /Mods/ExampleMod/prompts/
@@ -176,10 +192,11 @@ You can override in-game TextAssets using `.txt` files.
 
 ---
 
-## 🧠 Important Note
+## 🧠 Important Notes
 
-* `textassets/` folder is **deprecated**
-* Use `prompts/` instead for all text overrides
+* `textassets/` folder is deprecated
+* Use `prompts/` for all text overrides
+* Mods are now fully **manifest-driven**
 
 ---
 
@@ -193,7 +210,7 @@ git clone https://github.com/yourusername/RoboPatch.git
 
 ---
 
-### 2. References required
+### 2. Required references
 
 From **Robotopia_Data/Managed**:
 
@@ -234,7 +251,7 @@ Copy DLL to:
 * Make changes
 * Submit pull request
 
-Keep changes focused and minimal.
+Keep changes small and focused.
 
 ---
 
@@ -249,10 +266,10 @@ Keep changes focused and minimal.
 ## 💡 TODO
 
 * Mod dependency system
-* Prompt stacking (base + mod + scene)
-* Mod enable/disable menu
-* Hot reload system
-* Public mod API
+* Load order / priority system
+* Mod menu UI
+* Hot reload for manifests
+* Prompt stacking system
 
 ---
 
