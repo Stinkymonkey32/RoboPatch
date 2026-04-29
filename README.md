@@ -4,7 +4,7 @@
 
 Built using **BepInEx** and **Harmony**, it hooks into Unity’s asset loading system and redirects it to custom content, letting you modify the game without permanently changing its files.
 
-> ⚠️ **RoboPatch is going through a big change** RoboPatch will soon use a Mod API to make everything easier for users. Mods that don't update to comply with these changes will be considered legacy mods and unstable. Thanks for your understanding!
+> ⚠️ **RoboPatch is going through a big change:** RoboPatch will soon use a Mod API to make everything easier for users. Mods that don't update to comply with these changes will be considered legacy mods and unstable. Thanks for your understanding!
 
 ---
 
