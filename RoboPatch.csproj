@@ -4,6 +4,7 @@
     <TargetFramework>netstandard2.1</TargetFramework>
     <OutputType>Library</OutputType>
     <LangVersion>latest</LangVersion>
+    <AssemblyName>RoboPatch</AssemblyName>
   </PropertyGroup>
 
   <ItemGroup>
