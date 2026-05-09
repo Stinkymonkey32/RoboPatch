@@ -2,260 +2,150 @@ using BepInEx;
 using BepInEx.Unity.Mono;
 using HarmonyLib;
 using UnityEngine;
-using UnityEngine.UI;
 using UnityEngine.SceneManagement;
-using UnityEngine.EventSystems;
-using System.IO;
-using System.Collections.Generic;
-using System;
-using System.Reflection;
-using System.Net.Http;
-using System.Net.Http.Headers;
-using System.Threading.Tasks;
 
-[BepInPlugin("com.stinkymonkey36.RoboPatch", "RoboPatch", "2.3.0")]
+// =============================================================================
+//  RoboPatch.cs  -  MAIN ENTRY POINT
+//
+//  This is the BepInEx plugin that Unity loads at startup. It:
+//    1. Sets up Harmony patches (TextAsset override system)
+//    2. Creates the mod loader and spawn system
+//    3. Handles Unity lifecycle events (Awake, Start, Update, OnDestroy)
+//
+//  The actual mod loading logic lives in ModLoader.cs.
+//  The spawn/manifest logic lives in SpawnSystem.cs.
+//  All IMod hook calls are centralized in ModLifecycle.cs.
+// =============================================================================
+
+namespace RoboPatchMod
+{
+
+[BepInPlugin("com.stinkymonkey36.RoboPatch", "RoboPatch", "2.3.2")]
 public class RoboPatch : BaseUnityPlugin
 {
-    private const string CURRENT_VERSION = "2.3.0";
-    private const string VERSION_URL =
-        "https://raw.githubusercontent.com/Stinkymonkey32/RoboPatch/main/version.xml";
+    private const string CURRENT_VERSION = "2.3.2";
 
-    // ── PROMPTS ──
-    private static Dictionary<string, string> promptCache =
-        new(StringComparer.OrdinalIgnoreCase);
+    // ── CORE SYSTEMS ─────────────────────────────────────────────────────────
+    private PromptManager _prompts;     // Manages TextAsset prompt overrides
+    private ModLoader _loader;          // Discovers and loads mods from /Mods/
+    private string _modsFolder;         // Full path to the /Mods/ directory
 
-    [HarmonyPatch(typeof(TextAsset), "get_text")]
-    class Patch_TextAsset_Text
-    {
-        static void Postfix(TextAsset __instance, ref string __result)
-        {
-            if (__instance == null || string.IsNullOrEmpty(__instance.name)) return;
-
-            if (promptCache.TryGetValue(__instance.name, out string value))
-                __result = value;
-        }
-    }
-
-    // ── MANIFEST STRUCTURES ──
-    [Serializable]
-    public class Manifest
-    {
-        public string name;
-        public string version;
-
-        public string[] bundles;
-        public AssetDef[] assets;
-        public SpawnRule[] spawns;
-
-        public string scriptClass;
-    }
-
-    [Serializable]
-    public class AssetDef
-    {
-        public string name;
-        public string type;
-    }
-
-    [Serializable]
-    public class SpawnRule
-    {
-        public string asset;
-        public string mode;
-        public string[] scenes;
-        public float[] position;
-    }
-
-    // ── MOD CONTEXT ──
-    class ModContext
-    {
-        public string Name;
-        public Manifest Manifest;
-
-        public List<AssetBundle> Bundles = new();
-        public List<Assembly> Assemblies = new();
-
-        public Dictionary<string, UnityEngine.Object> AssetMap =
-            new(StringComparer.OrdinalIgnoreCase);
-    }
-
-    private List<ModContext> mods = new();
-    private string modsFolder;
-
-    // ── UNITY ──
+    // ── AWAKE ────────────────────────────────────────────────────────────────
+    // Unity calls this once when the plugin is first loaded.
+    // We set up Harmony patches and scene load event listeners here.
     void Awake()
     {
+        // Apply all [HarmonyPatch] annotations in this assembly
         var harmony = new Harmony("com.stinkymonkey36.RoboPatch");
         harmony.PatchAll();
 
+        // Initialize the prompt override system and connect it to the
+        // Harmony patch that intercepts TextAsset.get_text
+        _prompts = new PromptManager(Logger);
+        PromptTextAssetPatch.Initialize(_prompts);
+
+        // Listen for scene changes so we can auto-spawn assets
         SceneManager.sceneLoaded += OnSceneLoaded;
-        Logger.LogInfo("RoboPatch v2.3.0 (new manifest system)");
+
+        Logger.LogInfo($"RoboPatch v{CURRENT_VERSION} (Mod API system)");
     }
 
+    // ── START ────────────────────────────────────────────────────────────────
+    // Unity calls this after Awake, once the plugin is ready.
+    // We resolve the game root, create the Mods folder, and load everything.
     void Start()
     {
-        string pluginDir = Path.GetDirectoryName(typeof(RoboPatch).Assembly.Location);
-        string gameRoot = Path.GetFullPath(Path.Combine(pluginDir, "..", ".."));
+        // The plugin DLL lives in BepInEx/plugins/, so we go up 2 levels
+        // to find the game root (where Mods/ should be)
+        string pluginDir = System.IO.Path.GetDirectoryName(typeof(RoboPatch).Assembly.Location);
+        string gameRoot = System.IO.Path.GetFullPath(System.IO.Path.Combine(pluginDir, "..", ".."));
 
-        modsFolder = Path.Combine(gameRoot, "Mods");
-        Directory.CreateDirectory(modsFolder);
+        _modsFolder = System.IO.Path.Combine(gameRoot, "Mods");
+        System.IO.Directory.CreateDirectory(_modsFolder);
 
-        LoadMods();
-        _ = CheckForUpdates();
+        // Initialize loader
+        _loader = new ModLoader(Logger, _prompts, _modsFolder);
+
+        // Load all mods from /Mods/
+        _loader.LoadAll();
+
+        // Check for RoboPatch updates in the background
+        var updater = new UpdateChecker(Logger, CURRENT_VERSION);
+        _ = updater.Check();
     }
 
-    // ── MOD LOADING ──
-    private void LoadMods()
-    {
-        foreach (var folder in Directory.GetDirectories(modsFolder))
-        {
-            string modName = Path.GetFileName(folder);
-            var mod = new ModContext { Name = modName };
-
-            string manifestPath = Path.Combine(folder, "manifest.json");
-            if (!File.Exists(manifestPath))
-            {
-                Logger.LogWarning($"[{modName}] Missing manifest.json");
-                continue;
-            }
-
-            mod.Manifest = JsonUtility.FromJson<Manifest>(
-                File.ReadAllText(manifestPath)
-            );
-
-            Logger.LogInfo($"[{modName}] Loaded manifest");
-
-            // ── LOAD BUNDLES ──
-            if (mod.Manifest.bundles != null)
-            {
-                foreach (var b in mod.Manifest.bundles)
-                {
-                    string path = Path.Combine(folder, b);
-                    var bundle = AssetBundle.LoadFromFile(path);
-
-                    if (bundle != null)
-                    {
-                        mod.Bundles.Add(bundle);
-                        Logger.LogInfo($"[{modName}] Loaded bundle {b}");
-
-                        // cache assets
-                        foreach (var assetName in bundle.GetAllAssetNames())
-                        {
-                            var obj = bundle.LoadAsset(assetName);
-                            string cleanName = Path.GetFileNameWithoutExtension(assetName);
-                            mod.AssetMap[cleanName] = obj;
-                        }
-                    }
-                }
-            }
-
-            // ── LOAD DLLs ──
-            foreach (var dll in Directory.GetFiles(folder, "*.dll"))
-            {
-                try
-                {
-                    mod.Assemblies.Add(Assembly.LoadFrom(dll));
-                }
-                catch (Exception ex)
-                {
-                    Logger.LogError($"[{modName}] DLL error: {ex}");
-                }
-            }
-
-            // ── LOAD PROMPTS ──
-            string prompts = Path.Combine(folder, "prompts");
-            if (Directory.Exists(prompts))
-            {
-                foreach (var file in Directory.GetFiles(prompts, "*.txt"))
-                {
-                    string key = Path.GetFileNameWithoutExtension(file);
-                    promptCache[key] = File.ReadAllText(file);
-                }
-            }
-
-            mods.Add(mod);
-        }
-    }
-
-    // ── SPAWN SYSTEM ──
+    // ── UPDATE ───────────────────────────────────────────────────────────────
+    // Unity calls this every frame.
+    // Handles the manual spawn key (M) and forwards Update to all mods.
     void Update()
     {
-        if (Input.GetKeyDown(KeyCode.M))
-        {
-            foreach (var mod in mods)
-                RunSpawns(mod, SceneManager.GetActiveScene().name);
-        }
+        // Forward Update() to every loaded mod plugin
+        foreach (var mod in _loader.Mods)
+            ModLifecycle.Update(mod, Logger);
     }
 
+    // ── ON SCENE LOADED ──────────────────────────────────────────────────────
+    // Forwards the event to all mod plugins so they can handle their own spawning.
     private void OnSceneLoaded(Scene scene, LoadSceneMode mode)
     {
-        foreach (var mod in mods)
-            RunSpawns(mod, scene.name);
+        foreach (var mod in _loader.Mods)
+            ModLifecycle.SceneLoaded(mod, scene.name, Logger);
     }
 
-    private void RunSpawns(ModContext mod, string sceneName)
+    // ── ON DESTROY ───────────────────────────────────────────────────────────
+    // Unity calls this when the plugin is being unloaded.
+    // We clean up all mods, unload asset bundles, and fire OnUnload hooks.
+    void OnDestroy()
     {
-        var spawns = mod.Manifest?.spawns;
-        if (spawns == null) return;
-
-        foreach (var spawn in spawns)
-        {
-            if (spawn.mode == "manual" && !Input.GetKeyDown(KeyCode.M))
-                continue;
-
-            if (spawn.scenes != null &&
-                Array.IndexOf(spawn.scenes, sceneName) < 0)
-                continue;
-
-            if (!mod.AssetMap.TryGetValue(spawn.asset, out var obj))
-            {
-                Logger.LogWarning($"[{mod.Name}] Missing asset: {spawn.asset}");
-                continue;
-            }
-
-            Vector3 pos = Vector3.zero;
-            if (spawn.position != null && spawn.position.Length == 3)
-                pos = new Vector3(spawn.position[0], spawn.position[1], spawn.position[2]);
-
-            GameObject go = Instantiate(obj as GameObject, pos, Quaternion.identity);
-            go.name = spawn.asset;
-
-            AttachScript(go, mod);
-        }
-    }
-
-    private void AttachScript(GameObject obj, ModContext mod)
-    {
-        if (string.IsNullOrEmpty(mod.Manifest.scriptClass)) return;
-
-        foreach (var asm in mod.Assemblies)
-        {
-            var type = asm.GetType(mod.Manifest.scriptClass);
-            if (type == null) continue;
-
-            var comp = obj.AddComponent(type);
-
-            var method = type.GetMethod("Activate",
-                BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
-
-            method?.Invoke(comp, null);
-
-            Logger.LogInfo($"[{mod.Name}] Script attached: {mod.Manifest.scriptClass}");
-            break;
-        }
-    }
-
-    // ── UPDATE CHECK (unchanged) ──
-    private async Task CheckForUpdates()
-    {
-        try
-        {
-            using var client = new HttpClient();
-            string latest = (await client.GetStringAsync(VERSION_URL)).Trim();
-
-            if (latest != CURRENT_VERSION)
-                Logger.LogWarning($"Update available: {latest}");
-        }
-        catch { }
+        _loader?.UnloadAll();
     }
 }
+
+}
+
+// ── HARMONY PATCH: TextAsset Override ────────────────────────────────────────
+// This patches Unity's TextAsset.get_text property getter so that any
+// TextAsset whose name matches a prompt override key returns custom text.
+// The prompt data is managed by PromptManager.
+[HarmonyPatch(typeof(TextAsset), "get_text")]
+class PromptTextAssetPatch
+{
+    private static PromptManager _prompts;
+
+    // Called from RoboPatch.Awake() to connect the patch to the manager
+    public static void Initialize(PromptManager prompts) => _prompts = prompts;
+
+    static void Postfix(TextAsset __instance, ref string __result)
+    {
+        // Skip null assets and assets with no name
+        if (__instance == null || string.IsNullOrEmpty(__instance.name) || _prompts == null)
+            return;
+
+        // If this TextAsset's name matches an override key, swap the text
+        if (_prompts.TryGetValue(__instance.name, out string value))
+            __result = value;
+    }
+}
+
+// ── MANIFEST SERIALIZATION CLASSES ───────────────────────────────────────────
+// These are used by the manifest.json file format for mod metadata.
+// They map directly to the JSON structure described in the README.
+// If you change these, update the README to match!
+
+[System.Serializable]
+public class Manifest
+{
+    public string name;             // Mod display name
+    public string version;          // Mod version string
+    public AssetDef[] assets;       // (Reserved) Individual asset definitions
+    public string scriptClass;      // Fully qualified class name for legacy script attachment
+}
+
+[System.Serializable]
+public class AssetDef
+{
+    public string name;             // Asset name
+    public string type;             // Asset type string (reserved)
+}
+
+

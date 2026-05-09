@@ -7,6 +7,14 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Compile Remove="RoboPatch.API/**/*.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="RoboPatch.API\RoboPatch.API.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
     <!-- Core Unity DLLs -->
     <Reference Include="UnityEngine">
       <HintPath>UnityEngine.dll</HintPath>
