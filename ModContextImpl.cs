@@ -120,6 +120,18 @@ class ModContextImpl : IModContext
         return go;
     }
 
+    // ── PROMPT OVERRIDES ─────────────────────────────────────────────────────
+    public void OverridePrompt(string key, string text)
+    {
+        _prompts.SetOverride(key, text, Name);
+        _logger.LogInfo($"[{Name}] Overrode prompt '{key}'");
+    }
+
+    public bool TryGetPromptOverride(string key, out string text)
+    {
+        return _prompts.TryGetValue(key, out text);
+    }
+
     // ── LOGGING ──────────────────────────────────────────────────────────────
     public void LogInfo(string message) => _logger.LogInfo($"[{Name}] {message}");
     public void LogWarning(string message) => _logger.LogWarning($"[{Name}] {message}");

@@ -7,18 +7,17 @@
 ## 📦 Installation
 
 1. Download *Robotopia* from [Discord](https://discord.gg/5vQvxFNDGJ)
-2. Download **BepInEx Bleeding Edge** from [builds.bepinex.dev](https://builds.bepinex.dev)
-3. Extract BepInEx into your Robotopia folder
-4. Run the game once
-5. Download the latest RoboPatch release
-6. Place `RoboPatch.dll` into `Robotopia/BepInEx/plugins/`
-7. Run the game — RoboPatch will create a `Mods` folder at the root of your Robotopia directory. Place mods there.
+2. Download the latest `RoboPatch.zip`
+3. Unzip it and paste the **contents** of the extracted folder (not the folder itself) into your Robotopia game folder
+4. Run the game — RoboPatch will create a `Mods` folder at the root of your Robotopia directory. Place mods there.
 
 ---
 
 ## 📖 Documentation
 
-Full documentation, modding guides, and API reference are available on the [RoboPatch GitHub Wiki](https://github.com/anomalyco/RoboPatch/wiki).
+Full documentation, modding guides, and API reference are available on the [RoboPatch GitHub Wiki](https://github.com/Stinkymonkey32/RoboPatch/wiki).
+
+For help, check the wiki or ask in the `#Mods` forum on the [Robotopia Discord](https://discord.gg/y7FFkqyNns).
 
 ---
 

@@ -38,6 +38,13 @@ class PromptManager
         }
     }
 
+    // ── SET OVERRIDE ─────────────────────────────────────────────────────────
+    // Allows a mod to programmatically set a prompt override at runtime.
+    public void SetOverride(string key, string text, string modName)
+    {
+        _overrides[key] = (modName, text);
+    }
+
     // ── TRY GET VALUE ────────────────────────────────────────────────────────
     // Used by the Harmony patch (PromptTextAssetPatch) to look up overrides.
     public bool TryGetValue(string key, out string value)
