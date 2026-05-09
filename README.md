@@ -1,10 +1,10 @@
 # **RoboPatch (Alpha)**
 
-**RoboPatch** is a custom asset framework for *Robotopia* that allows you to inject and replace in-game assets at runtime.
+**RoboPatch** is a modding tool for *Robotopia* that allows you to inject and replace in-game assets at runtime.
 
 Built using **BepInEx** and **Harmony**, it hooks into Unity's asset loading system and redirects it to custom content, letting you modify the game without permanently changing its files.
 
-> ⚠️ **RoboPatch is still in alpha.** It is usable, but some systems are still evolving.
+> ⚠️ **RoboPatch is going through a big change:** RoboPatch will soon use a Mod API to make everything easier for users. Mods that don't update to comply with these changes will be considered legacy mods and unstable. Thanks for your understanding!
 
 ---
 
@@ -15,9 +15,18 @@ Built using **BepInEx** and **Harmony**, it hooks into Unity's asset loading sys
 * Load multiple **AssetBundles per mod**
 * Patch in-game **TextAssets** using `.txt` overrides
 * AI prompt override system via `prompts/`
-* **Public Mod API** (`RoboPatch.API`) for code-driven mods
+* Manifest-based mod loading (`manifest.json`)
 * Fully reversible changes (no permanent file modification)
-* Automatic conflict detection for prompt overrides
+
+---
+
+## 🎮 Current Controls
+
+* Press **M** in-game to manually spawn assets
+
+  * Works for mods with `spawn.mode = "manual"` in `manifest.json`
+
+* Mods with `spawn.mode = "automatic"` will spawn automatically on scene load
 
 ---
 
@@ -34,6 +43,7 @@ It intercepts asset loading and replaces or injects modded content dynamically, 
 * No permanent file modification
 * Modular mod system
 * Multi-asset bundle support
+* Rule-based spawning system
 * Runtime AI prompt modification
 * **Plugin-based mod API** for full control
 
@@ -82,9 +92,9 @@ Each mod lives in its own subfolder under `/Mods/`:
     /YourModId
       manifest.json
 
-      assets/
-        bundles/
-          myassets.bundle
+      bundles/
+        example.bundle
+        extra.bundle   ← multiple supported
 
       YourMod.dll
 
@@ -102,66 +112,34 @@ Optional metadata file for your mod:
 {
   "name": "YourMod",
   "version": "1.0.0",
-  "scriptClass": "YourMod.Main"
+
+  "asset": "ExamplePrefab",
+
+  "spawn": {
+    "mode": "manual",
+    "scene": "City Streets",
+    "position": [0, 1, 0]
+  },
+
+  "scriptClass": "ExampleMod.Main"
 }
 ```
-
-### Fields:
-
-| Field | Type | Description |
-|---|---|---|
-| `name` | string | Mod display name |
-| `version` | string | Mod version |
-| `scriptClass` | string | Fully-qualified class name for legacy script attachment |
-
-Spawn rules are no longer defined in JSON -- handle spawning in code via `OnSceneLoaded`.
 
 ---
 
-## 🧩 Mod API (Code-Driven Mods)
+### Fields explained:
 
-For full control, implement the `IMod` interface from `RoboPatch.API.dll`.
+* `asset` – Prefab name inside any loaded AssetBundle
+* `spawn.mode` – `manual` or `automatic`
+* `spawn.scene` – Scene name to spawn in
+* `spawn.position` – XYZ position
+* `scriptClass` – DLL class to attach to spawned object
 
-### 1. Reference the API
+---
 
-Add a reference to `RoboPatch.API.dll` in your mod project.
+## 💬 Prompt System (AI BEHAVIOR OVERRIDES)
 
-### 2. Implement the interface
-
-```csharp
-using RoboPatch;
-using UnityEngine;
-
-[ModPlugin("MyMod", "1.0.0")]
-public class MyMod : IMod
-{
-    private IModContext api;
-
-    public void OnLoad(IModContext api)
-    {
-        api = api;
-
-        // Explicitly load your asset bundles
-        api.LoadBundles();
-
-        // Read config files from mod root
-        string cfg = api.ReadAllText("config.json");
-
-        api.LogInfo("Mod loaded!");
-    }
-
-    public void OnSceneLoaded(string scene)
-    {
-        if (scene == "City Streets")
-            api.SpawnAsset("MyPrefab", new Vector3(0, 1, 0));
-    }
-
-    public void OnUnload() { }
-    public void OnUpdate() { }
-}
-```
-
-### 3. Place your DLL in the mod folder
+RoboPatch supports AI behavior modification via:
 
 ```text
 /Mods/MyMod/
@@ -209,13 +187,38 @@ Place `*.txt` files in your mod's `prompts/` folder. The filename becomes the Te
   system.txt
 ```
 
-Each file is loaded at startup. If two mods override the same key, a conflict error is logged:
+### How it works:
 
-```
-[CONFLICT] Prompt 'personality' overridden by both [ModA] and [ModB]
+* Each file name = prompt key
+* Loaded into runtime override cache
+* Overrides in-game AI TextAssets or behavior prompts
+
+> Example: `personality.txt` changes robot personality behavior.
+
+---
+
+## 📄 TextAsset Overrides
+
+You can override in-game TextAssets using `.txt` files.
+
+### How:
+
+1. Place `.txt` inside:
+
+```text
+/Mods/ExampleMod/prompts/
 ```
 
-The last mod to load wins — nothing crashes.
+2. File name must match the in-game TextAsset name exactly
+
+3. RoboPatch replaces it at runtime
+
+---
+
+## 🧠 Important Note
+
+* `textassets/` folder is **deprecated**
+* Use `prompts/` instead for all text overrides
 
 ---
 
@@ -227,7 +230,7 @@ The last mod to load wins — nothing crashes.
 git clone https://github.com/yourusername/RoboPatch.git
 ```
 
-### 2. References required
+### 2. Required references
 
 From **Robotopia_Data/Managed**:
 
@@ -269,7 +272,7 @@ Modders: reference `RoboPatch.API.dll` in your own projects.
 * Make changes
 * Submit pull request
 
-Keep changes focused and minimal.
+Keep changes small and focused.
 
 ---
 
@@ -287,7 +290,7 @@ Keep changes focused and minimal.
 * Prompt stacking (base + mod + scene)
 * Mod enable/disable menu
 * Hot reload system
-* Mod configuration UI
+* Public mod API
 
 ---
 
