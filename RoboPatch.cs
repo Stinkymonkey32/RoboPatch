@@ -88,6 +88,7 @@ public class RoboPatch : BaseUnityPlugin
     // Forwards the event to all mod plugins so they can handle their own spawning.
     private void OnSceneLoaded(Scene scene, LoadSceneMode mode)
     {
+        if (_loader == null) return;
         foreach (var mod in _loader.Mods)
             ModLifecycle.SceneLoaded(mod, scene.name, Logger);
     }
