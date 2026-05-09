@@ -6,9 +6,9 @@
 
 ## 📦 Installation
 
-1. Download *Robotopia* from [Discord](https://discord.gg/5vQvxFNDGJ)
+1. Download *Robotopia* from [their Discord server](https://discord.gg/5vQvxFNDGJ)
 2. Download the latest `RoboPatch.zip`
-3. Unzip it and paste the **contents** of the extracted folder (not the folder itself) into your Robotopia game folder
+3. Unzip it and paste the **contents** of the extracted RoboPatch folder (not the folder itself) into your Robotopia game folder
 4. Run the game — RoboPatch will create a `Mods` folder at the root of your Robotopia directory. Place mods there.
 
 ---
