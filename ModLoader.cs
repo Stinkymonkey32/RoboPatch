@@ -126,9 +126,8 @@ class ModLoader
         // ── 6. FIRE OnLoad ─────────────────────────────────────────────
         // Uses the centralized ModLifecycle so all hook calls go through
         // one error-handling path. Edit ModLifecycle.cs to add hooks.
-        ModLifecycle.Load(plugin != null
-            ? new LoadedMod { Name = modName, Plugin = plugin }
-            : null, ctx, _logger);
+        if (plugin != null)
+            ModLifecycle.Load(new LoadedMod { Name = modName, Plugin = plugin }, ctx, _logger);
 
         // ── 7. REGISTER MOD ────────────────────────────────────────────
         _mods.Add(new LoadedMod
