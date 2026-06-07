@@ -8,13 +8,13 @@ RoboPatch is a custom asset framework for *Robotopia* that lets you inject and r
 
 | Guide | What it covers |
 |---|---|
-| [Getting Started](Getting-Started) | Install RoboPatch, create your first mod |
-| [Mod Structure](Mod-Structure) | Folder layout, `manifest.json`, file access |
-| [Mod API Reference](Mod-API-Reference) | All `IMod` and `IModContext` methods |
-| [Asset Bundle Guide](Asset-Bundle-Guide) | Creating and loading Unity AssetBundles |
-| [Prompt System](Prompt-System) | Overriding AI TextAssets at runtime |
-| [Troubleshooting](Troubleshooting) | Common issues and fixes |
-| [Roadmap](Roadmap) | Current limitations and planned features |
+| [Getting Started](Getting-Started.md) | Install RoboPatch, create your first mod |
+| [Mod Structure](Mod-Structure.md) | Folder layout, `manifest.json`, file access |
+| [Mod API Reference](Mod-API-Reference.md) | All `IMod` and `IModContext` methods |
+| [Asset Bundle Guide](Asset-Bundle-Guide.md) | Creating and loading Unity AssetBundles |
+| [Prompt System](Prompt-System.md) | Overriding AI TextAssets at runtime |
+| [Troubleshooting](Troubleshooting.md) | Common issues and fixes |
+| [Roadmap](Roadmap.md) | Current limitations and planned features |
 
 ---
 

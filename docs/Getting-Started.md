@@ -65,7 +65,7 @@ Build your project, drop the DLL into `Robotopia/Mods/MyFirstMod/`, launch the g
 
 ## What Next?
 
-- [Mod Structure](Mod-Structure) — folder layout, manifest.json fields
-- [Mod API Reference](Mod-API-Reference) — all IMod + IModContext methods
-- [Asset Bundle Guide](Asset-Bundle-Guide) — adding 3D models and prefabs
-- [Prompt System](Prompt-System) — overriding AI behavior
+- [Mod Structure](Mod-Structure.md) — folder layout, manifest.json fields
+- [Mod API Reference](Mod-API-Reference.md) — all IMod + IModContext methods
+- [Asset Bundle Guide](Asset-Bundle-Guide.md) — adding 3D models and prefabs
+- [Prompt System](Prompt-System.md) — overriding AI behavior
