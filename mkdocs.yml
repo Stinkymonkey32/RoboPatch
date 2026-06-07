@@ -1,6 +1,7 @@
 site_name: RoboPatch
 site_description: Custom asset framework for Robotopia
-repo_url: https://github.com/yourusername/RoboPatch
+site_url: https://robopatch.readthedocs.io/
+repo_url: https://github.com/Stinkymonkey32/RoboPatch
 edit_uri: edit/main/docs/
 
 theme:

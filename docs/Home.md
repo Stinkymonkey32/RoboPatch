@@ -1,4 +1,4 @@
-# RoboPatch Wiki
+# RoboPatch Docs
 
 RoboPatch is a custom asset framework for *Robotopia* that lets you inject and replace in-game assets at runtime using BepInEx and Harmony.
 

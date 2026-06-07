@@ -6,7 +6,7 @@ A quick walkthrough to install RoboPatch and create your first mod.
 
 ## Install RoboPatch
 
-1. Download the latest `RoboPatch.dll` from [Releases](https://github.com/yourusername/RoboPatch/releases)
+1. Download the latest `RoboPatch.dll` from [Releases](https://github.com/Stinkymonkey32/RoboPatch/releases)
 2. Copy it into `Robotopia/BepInEx/plugins/`
 3. Launch the game once — RoboPatch creates the `Mods/` folder automatically
 
