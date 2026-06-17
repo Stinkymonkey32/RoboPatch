@@ -1,3 +1,4 @@
+#nullable enable
 using BepInEx;
 using BepInEx.Unity.Mono;
 using HarmonyLib;
@@ -116,6 +117,14 @@ class PromptTextAssetPatch
     // Called from RoboPatch.Awake() to connect the patch to the manager
     public static void Initialize(PromptManager prompts) => _prompts = prompts;
 
+    public static bool TryGetSystemPromptOverride(out string? text)
+    {
+        if (_prompts != null)
+            return _prompts.TryGetSystemPromptOverride(out text);
+        text = null;
+        return false;
+    }
+
     static void Postfix(TextAsset __instance, ref string __result)
     {
         // Skip null assets and assets with no name
@@ -125,6 +134,28 @@ class PromptTextAssetPatch
         // If this TextAsset's name matches an override key, swap the text
         if (_prompts.TryGetValue(__instance.name, out string value))
             __result = value;
+    }
+}
+
+// ── HARMONY PATCH: SystemPrompt Override ─────────────────────────────────────
+// When a mod places SystemPrompt.txt in their prompts/ folder, it gets routed
+// to the server-side plan request via PersonalityAsset.SystemPromptOverride
+// instead of overriding the client-side TextAsset.
+// Uses TargetMethod to resolve PersonalityAsset at runtime (it's in the
+// game's Assembly-CSharp.dll, not referenced at compile time).
+[HarmonyPatch]
+class SystemPromptPatch
+{
+    static HarmonyMethod TargetMethod()
+    {
+        var type = AccessTools.TypeByName("PersonalityAsset");
+        return new HarmonyMethod(type, "get_SystemPromptOverride");
+    }
+
+    static void Postfix(ref string? __result)
+    {
+        if (PromptTextAssetPatch.TryGetSystemPromptOverride(out string? modOverride))
+            __result = modOverride;
     }
 }
 

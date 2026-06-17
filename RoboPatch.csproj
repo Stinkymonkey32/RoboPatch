@@ -9,6 +9,7 @@
 
   <ItemGroup>
     <Compile Remove="RoboPatch.API/**/*.cs" />
+    <Compile Remove="GameCode/**/*.cs" />
   </ItemGroup>
 
   <ItemGroup>
