@@ -1,0 +1,4 @@
+<Solution>
+  <Project Path="RoboPatch.API/RoboPatch.API.csproj" />
+  <Project Path="RoboPatch.csproj" />
+</Solution>
