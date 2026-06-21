@@ -5,7 +5,7 @@ sys.path.insert(0, os.path.abspath('..'))
 
 project = 'roboPatch'
 author = 'roboPatch contributors'
-release = '0.1.0'
+release = '3.0.0'
 # Configuration file for the Sphinx documentation builder.
 
 import os
@@ -24,9 +24,10 @@ version = '0.1.0'
 # -- General configuration
 
 extensions = [
-    'sphinx.ext.autodoc',
-    'sphinx.ext.autosummary',
-    'sphinx.ext.intersphinx',
+    "myst_parser",
+    "sphinx.ext.autodoc",
+    "sphinx.ext.autosummary",
+    "sphinx.ext.intersphinx",
 ]
 
 intersphinx_mapping = {
