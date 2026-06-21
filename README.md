@@ -4,7 +4,7 @@
 
 ---
 
-## 📦 Installation
+## Installation
 
 1. Download *Robotopia* from [their Discord server](https://discord.gg/5vQvxFNDGJ)
 2. Download the latest `RoboPatch.zip`
@@ -13,20 +13,21 @@
 
 ---
 
-## 📖 Documentation
+## Documentation
 
 Full documentation, modding guides, and API reference are available on [ReadTheDocs](https://robopatch.readthedocs.io/).
 
-For help, check the docs or ask in the `#Mods` forum on the [Robotopia Discord](https://discord.gg/y7FFkqyNns).
+For help, check the docs or ask in the `# levels-and-Mods` forum on the [Robotopia Discord](https://discord.gg/y7FFkqyNns).
 
 ---
 
-## 🙏 Credits
+## Credits
 
-- **Robotopia Dev Team / Tomato Cake Inc** — [Discord](https://discord.gg/5vQvxFNDGJ)
-- **BepInEx** — [GitHub](https://github.com/BepInEx/BepInEx)
-- **Harmony** — [GitHub](https://github.com/pardeike/Harmony)
-- **Cinematic Unity Explorer** — [GitHub](https://github.com/originalnicodr/CinematicUnityExplorer)
+- **Robotopia Dev Team / Tomato Cake Inc** - [Discord](https://discord.gg/5vQvxFNDGJ)
+- **BepInEx** - [GitHub](https://github.com/BepInEx/BepInEx)
+- **Harmony** - [GitHub](https://github.com/pardeike/Harmony)
+- **Cinematic Unity Explorer** - [GitHub](https://github.com/originalnicodr/CinematicUnityExplorer)
+- **Skavvy** - [Github] (https://github.com/collinator-coder)
 
 ---
 
