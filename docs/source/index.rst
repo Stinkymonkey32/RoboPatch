@@ -1,17 +1,11 @@
-Welcome to Lumache's documentation!
-===================================
+RoboPatch Documentation
+========================
 
-**Lumache** (/lu'make/) is a Python library for cooks and food lovers
-that creates recipes mixing random ingredients.
-It pulls data from the `Open Food Facts database <https://world.openfoodfacts.org/>`_
-and offers a *simple* and *intuitive* API.
-
-Check out the :doc:`usage` section for further information, including
-how to :ref:`installation` the project.
+RoboPatch is a Python-based project. This documentation provides an overview of its modules, APIs, and usage patterns.
 
 .. note::
 
-   This project is under active development.
+   This documentation is generated with Sphinx and is under active development.
 
 Contents
 --------
