@@ -133,28 +133,6 @@ class PromptTextAssetPatch
     }
 }
 
-// ── HARMONY PATCH: SystemPrompt Override ─────────────────────────────────────
-// When a mod places SystemPrompt.txt in their prompts/ folder, it gets routed
-// to the server-side plan request via PersonalityAsset.SystemPromptOverride
-// instead of overriding the client-side TextAsset.
-// Uses TargetMethod to resolve PersonalityAsset at runtime (it's in the
-// game's Assembly-CSharp.dll, not referenced at compile time).
-[HarmonyPatch]
-class SystemPromptPatch
-{
-    static HarmonyMethod TargetMethod()
-    {
-        var type = AccessTools.TypeByName("PersonalityAsset");
-        return new HarmonyMethod(type, "get_SystemPromptOverride");
-    }
-
-    static void Postfix(ref string? __result)
-    {
-        if (PromptTextAssetPatch.TryGetSystemPromptOverride(out string? modOverride))
-            __result = modOverride;
-    }
-}
-
 // ── MANIFEST SERIALIZATION CLASSES ───────────────────────────────────────────
 // These are used by the manifest.json file format for mod metadata.
 // They map directly to the JSON structure described in the README.
