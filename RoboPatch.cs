@@ -1,4 +1,5 @@
 #nullable enable
+using System.Security.Cryptography.X509Certificates;
 using BepInEx;
 using BepInEx.Unity.Mono;
 using HarmonyLib;
@@ -21,15 +22,19 @@ using UnityEngine.SceneManagement;
 namespace RoboPatchMod
 {
 
-[BepInPlugin("com.stinkymonkey36.RoboPatch", "RoboPatch", "2.3.2")]
+[BepInPlugin("com.stinkymonkey36.RoboPatch", "RoboPatch", "3.0.0")]
 public class RoboPatch : BaseUnityPlugin
 {
-    private const string CURRENT_VERSION = "2.3.2";
+    private const string CURRENT_VERSION = "3.0.0";
 
     // ── CORE SYSTEMS ─────────────────────────────────────────────────────────
     private PromptManager _prompts;     // Manages TextAsset prompt overrides
     private ModLoader _loader;          // Discovers and loads mods from /Mods/
-    private string _modsFolder;         // Full path to the /Mods/ directory
+    public static string modsFolder;         // Full path to the /Mods/ directory
+    // The plugin DLL lives in BepInEx/plugins/, so we go up 2 levels
+    // to find the game root (where Mods/ should be)
+    public static string pluginDir = System.IO.Path.GetDirectoryName(typeof(RoboPatch).Assembly.Location);
+    public static string gameRoot = System.IO.Path.GetFullPath(System.IO.Path.Combine(pluginDir, "..", ".."));
 
     // ── AWAKE ────────────────────────────────────────────────────────────────
     // Unity calls this once when the plugin is first loaded.
@@ -56,23 +61,14 @@ public class RoboPatch : BaseUnityPlugin
     // We resolve the game root, create the Mods folder, and load everything.
     void Start()
     {
-        // The plugin DLL lives in BepInEx/plugins/, so we go up 2 levels
-        // to find the game root (where Mods/ should be)
-        string pluginDir = System.IO.Path.GetDirectoryName(typeof(RoboPatch).Assembly.Location);
-        string gameRoot = System.IO.Path.GetFullPath(System.IO.Path.Combine(pluginDir, "..", ".."));
-
-        _modsFolder = System.IO.Path.Combine(gameRoot, "Mods");
-        System.IO.Directory.CreateDirectory(_modsFolder);
+        modsFolder = System.IO.Path.Combine(gameRoot, "Mods");
+        System.IO.Directory.CreateDirectory(modsFolder);
 
         // Initialize loader
-        _loader = new ModLoader(Logger, _prompts, _modsFolder);
+        _loader = new ModLoader(Logger, _prompts, modsFolder);
 
         // Load all mods from /Mods/
         _loader.LoadAll();
-
-        // Check for RoboPatch updates in the background
-        var updater = new UpdateChecker(Logger, CURRENT_VERSION);
-        _ = updater.Check();
     }
 
     // ── UPDATE ───────────────────────────────────────────────────────────────

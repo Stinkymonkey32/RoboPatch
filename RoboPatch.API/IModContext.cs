@@ -27,6 +27,8 @@ namespace RoboPatch
         /// <summary>Full path to your mod's folder on disk.</summary>
         string ModFolder { get; }
 
+        /// <summary>Local path from the ModFolder path to an 128*128 icon for your mod.</summary>
+
         /// <summary>
         /// Load an asset by name from any AssetBundle your mod loaded.
         /// Returns null if not found or type doesn't match.
