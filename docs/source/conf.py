@@ -6,19 +6,40 @@ sys.path.insert(0, os.path.abspath('..'))
 project = 'roboPatch'
 author = 'roboPatch contributors'
 release = '0.1.0'
+# Configuration file for the Sphinx documentation builder.
+
+import os
+import sys
+sys.path.insert(0, os.path.abspath('../..'))
+
+# -- Project information
+
+project = 'RoboPatch'
+copyright = '2026, Stinkymonkey32'
+author = 'Stinkymonkey32'
+
+release = '0.1'
+version = '0.1.0'
+
+# -- General configuration
 
 extensions = [
     'sphinx.ext.autodoc',
-    'sphinx.ext.napoleon',
-    'sphinx.ext.viewcode',
-    'sphinx.ext.githubpages',
-    'myst_parser',
+    'sphinx.ext.autosummary',
+    'sphinx.ext.intersphinx',
 ]
 
+intersphinx_mapping = {
+    'python': ('https://docs.python.org/3/', None),
+    'sphinx': ('https://www.sphinx-doc.org/en/master/', None),
+}
+intersphinx_disabled_domains = ['std']
+
 templates_path = ['_templates']
-exclude_patterns = []
 
-html_theme = 'alabaster'
-html_static_path = ['_static']
+# -- Options for HTML output
 
-autodoc_typehints = "description"
+html_theme = 'sphinx_rtd_theme'
+
+# -- Options for EPUB output
+epub_show_urls = 'footnote'
