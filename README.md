@@ -1,38 +1,68 @@
 # RoboPatch
 
-**RoboPatch** is a modding tool for *Robotopia* that injects and replaces game assets at runtime using **BepInEx** and **Harmony**.
+**RoboPatch** is a modding framework for *Robotopia* that injects, replaces, and extends game assets at runtime using **BepInEx** and **Harmony** as well as providing API references and features tailored to Robotopia.
+
+Designed to make creating and installing mods simple, flexible, and fast.
 
 ---
 
-## Installation
+## 📦 Installation
 
-1. Download *Robotopia* from [their Discord server](https://discord.gg/5vQvxFNDGJ)
-2. Download the latest `RoboPatch.zip`
-3. Unzip it and paste the **contents** of the extracted RoboPatch folder (not the folder itself) into your Robotopia game folder
-4. Run the game — RoboPatch will create a `Mods` folder at the root of your Robotopia directory. Place mods there.
+1. Download *Robotopia* from the official Discord server.
+2. Download the latest **RoboPatch.zip** release.
+3. Extract the archive.
+4. Copy the **contents** of the extracted RoboPatch folder (**not the folder itself**) into your Robotopia game directory.
+5. Launch the game once.
 
----
-
-## Documentation
-
-Full documentation, modding guides, and API reference are available on [ReadTheDocs](https://robopatch.readthedocs.io/).
-
-For help, check the docs or ask in the `# levels-and-Mods` forum on the [Robotopia Discord](https://discord.gg/y7FFkqyNns).
+RoboPatch will automatically create a `Mods` folder in the root of your Robotopia installation. Place your mods inside this folder.
 
 ---
 
-## Credits
+## 📚 Documentation
 
-- **Robotopia Dev Team / Tomato Cake Inc** - [Discord](https://discord.gg/5vQvxFNDGJ)
-- **BepInEx** - [GitHub](https://github.com/BepInEx/BepInEx)
-- **Harmony** - [GitHub](https://github.com/pardeike/Harmony)
-- **Cinematic Unity Explorer** - [GitHub](https://github.com/originalnicodr/CinematicUnityExplorer)
-- **Skavvy** - [Github] (https://github.com/collinator-coder)
+Complete documentation, modding guides, tutorials, and API references are available at:
+
+👉 **https://robopatch.readthedocs.io/**
+
+Need help?
+
+* Check the documentation first
+* Ask questions in the **#levels-and-mods** forum on the Robotopia Discord server
+
+---
+
+## 🛠 Features
+
+* Runtime asset replacement
+* BepInEx-powered mod loading
+* Harmony patch support
+* Simple drop-in mod installation
+* Extensible API for custom mods
+
+---
+
+## ❤️ Credits
+
+### Robotopia
+
+* **Robotopia Development Team / Tomato Cake Inc**
+
+### Open Source Projects
+
+* **BepInEx**
+* **Harmony**
+* **Cinematic Unity Explorer**
+
+### Contributors
+
+* **Skavvy** (@collinator-coder)
 
 ---
 
 ## 🤝 Contributing
 
-Fork, make changes, submit a PR. Keep changes small and focused.
+Contributions are welcome. Feel free to submit a pull request for bug fixes, improvements, new features, or documentation updates.
 
-For bugs and support, use [GitHub Issues](https://github.com/Stinkymonkey32/RoboPatch/issues).
+If you find missing, unclear, or incorrect information in the docs, you're encouraged to improve it.
+
+For bugs, suggestions, or support, please open an issue on GitHub.
