@@ -2,7 +2,7 @@
 
 > [!CAUTION]
 > **This repository is deprecated.**
-> RoboPatch is no longer maintained. Please migrate to [quantum-works](https://github.com/furroxide/quantum-works) for the latest updates, features, and security patches.
+> RoboPatch is no longer maintained. Please migrate to [QuantumWorks](https://github.com/furroxide/quantum-works) for the latest updates, features, and security patches.
 
 **RoboPatch** is a modding framework for *Robotopia* that injects, replaces, and extends game assets at runtime using **BepInEx** and **Harmony** as well as providing API references and features tailored to Robotopia.
 
